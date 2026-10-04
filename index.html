@@ -331,51 +331,72 @@ function lbl(p, txt, cls=''){ return L.marker(p,{icon:L.divIcon({className:'',ht
 let meMk=null, pinMk=null, tgtMk=null, tgtLines=null;
 
 /* ============ OpenStreetMap ============ */
-const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+// Ricerca campi: Nominatim (veloce). Dati del campo: API principale di OpenStreetMap, con Overpass come riserva.
+const OVERPASS = ['https://overpass-api.de/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+function timeoutFetch(url, opt={}, ms=25000){ const ac=new AbortController(), t=setTimeout(()=>ac.abort(),ms);
+  return fetch(url,{...opt,signal:ac.signal}).finally(()=>clearTimeout(t)); }
 async function overpass(q){
-  let err;
-  for(const url of OVERPASS){
-    const ac=new AbortController(), tm=setTimeout(()=>ac.abort(), 20000);
-    try{ const r=await fetch(url,{method:'POST',signal:ac.signal,body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
-      if(r.ok){ const j=await r.json(); clearTimeout(tm); return j; } err=new Error('HTTP '+r.status); }catch(e){ err=e; }
-    clearTimeout(tm);
-  }
-  throw err;
+  return Promise.any(OVERPASS.map(async url=>{ const r=await timeoutFetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}},45000);
+    if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }));
 }
-const ITALIA='(35.4,6.6,47.1,18.6)';
 const ctr = e => e.center ? [e.center.lat,e.center.lon] : [e.lat,e.lon];
-async function searchCourses(name){
-  const safe=name.replace(/["\\]/g,'');
-  const j=await overpass(`[out:json][timeout:25];nwr["leisure"="golf_course"]["name"~"${safe}",i]${ITALIA};out center tags;`);
-  return j.elements.filter(e=>e.tags&&e.tags.name);
+function fromNominatim(x){ return {type:x.osm_type, id:+x.osm_id, center:{lat:+x.lat,lon:+x.lon}, tags:{name:x.name||(x.display_name||'').split(',')[0]},
+  bbox:x.boundingbox.map(Number)}; } // bbox: minlat,maxlat,minlon,maxlon
+async function nominatim(params){
+  const r=await timeoutFetch('https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language=it&'+params,{},15000);
+  const j=await r.json(); return j.filter(x=>x.type==='golf_course' && (x.osm_type==='way'||x.osm_type==='relation')).map(fromNominatim);
 }
-async function nearCourses(p, radius=30000){
-  const j=await overpass(`[out:json][timeout:25];nwr["leisure"="golf_course"](around:${radius},${p[0]},${p[1]});out center tags;`);
-  return j.elements.filter(e=>e.tags&&e.tags.name).sort((a,b)=>dist(p,ctr(a))-dist(p,ctr(b)));
+async function nearCourses(p){
+  const vb=[p[1]-0.5,p[0]+0.35,p[1]+0.5,p[0]-0.35].map(v=>v.toFixed(4)).join(',');
+  const list=await nominatim(`limit=40&bounded=1&viewbox=${vb}&q=${encodeURIComponent('[leisure=golf_course]')}`);
+  return list.sort((a,b)=>dist(p,ctr(a))-dist(p,ctr(b)));
+}
+async function searchCourses(name){
+  let r=await nominatim(`limit=20&countrycodes=it&q=${encodeURIComponent('golf '+name)}`);
+  if(!r.length) r=await nominatim(`limit=20&countrycodes=it&q=${encodeURIComponent(name)}`);
+  if(!r.length){ const q=encodeURIComponent('[leisure=golf_course] '+name); r=await nominatim(`limit=20&countrycodes=it&q=${q}`); }
+  return r;
+}
+async function osmMap(b){ // b: minlat,maxlat,minlon,maxlon → elementi con geometria
+  const r=await timeoutFetch(`https://api.openstreetmap.org/api/0.6/map.json?bbox=${b[2]},${b[0]},${b[3]},${b[1]}`,{},40000);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j=await r.json(), nodes=new Map(), ways=new Map(), out=[];
+  for(const e of j.elements){ if(e.type==='node') nodes.set(e.id,[e.lat,e.lon]); else if(e.type==='way') ways.set(e.id,e); }
+  const geo=w=>{ const g=w.nodes.map(id=>nodes.get(id)).filter(Boolean); return g.length>1?g:null; };
+  for(const e of j.elements){ const t=e.tags; if(!t || !(t.golf || t.natural==='water')) continue;
+    if(e.type==='way'){ const g=geo(e); if(g) out.push({type:'way',tags:t,g}); }
+    else if(e.type==='relation'){ const outers=e.members.filter(m=>m.type==='way'&&m.role!=='inner').map(m=>ways.get(m.ref)).filter(Boolean).map(geo).filter(Boolean);
+      if(outers.length) out.push({type:'relation',tags:t,g:outers.sort((a,b)=>b.length-a.length)[0]}); } }
+  return out;
+}
+async function overpassMap(b){
+  const box=`(${b[0]},${b[2]},${b[1]},${b[3]})`;
+  const j=await overpass(`[out:json][timeout:40];(nwr["golf"]${box};way["natural"="water"]${box};);out geom${box};`);
+  const out=[]; for(const e of j.elements){ const g=geomOf(e); if(g&&g.length>1) out.push({type:e.type,tags:e.tags||{},g}); } return out;
 }
 function geomOf(el){
-  if(el.type==='way' && el.geometry) return el.geometry.map(g=>[g.lat,g.lon]);
+  if(el.type==='way' && el.geometry) return el.geometry.filter(Boolean).map(g=>[g.lat,g.lon]);
   if(el.type==='relation' && el.members){ const outer=el.members.filter(m=>m.role!=='inner' && m.geometry);
-    if(!outer.length) return null; return outer.sort((a,b)=>b.geometry.length-a.geometry.length)[0].geometry.map(g=>[g.lat,g.lon]); }
+    if(!outer.length) return null; return outer.sort((a,b)=>b.geometry.length-a.geometry.length)[0].geometry.filter(Boolean).map(g=>[g.lat,g.lon]); }
   return null;
 }
 async function loadCourse(el, force=false){
   const key='course.'+el.type+el.id;
   let data=force?null:store.get(key,null);
-  if(!data || data.v!==2){
-    toast('Scarico i dati del campo…', 9000);
-    const bb=await overpass(`[out:json][timeout:25];${el.type}(${el.id});out bb;`);
-    const b=bb.elements[0] && bb.elements[0].bounds; if(!b) throw new Error('confini non trovati');
-    const pad=0.0015, box=`(${b.minlat-pad},${b.minlon-pad},${b.maxlat+pad},${b.maxlon+pad})`;
-    const j=await overpass(`[out:json][timeout:40];(nwr["golf"]${box};way["natural"="water"]${box};relation["natural"="water"]${box};);out geom${box};`);
-    const els=[];
-    for(const e of j.elements){ const geo=geomOf(e); if(!geo||geo.length<2) continue; const t=e.tags||{};
-      els.push({k:e.type, g:t.golf||null, w:t.natural==='water', ref:t.ref||null, par:t.par||null, hcp:t.handicap||null,
-        geo:geo.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])}); }
-    data={v:2, id:el.type+el.id, src:{type:el.type,id:el.id}, name:(el.tags&&el.tags.name)||'Campo',
-      bounds:[[b.minlat,b.minlon],[b.maxlat,b.maxlon]], els};
+  if(!data || data.v!==3){
+    toast('Scarico i dati del campo…', 30000);
+    let bb=el.bbox;
+    if(!bb){ const r=await timeoutFetch(`https://nominatim.openstreetmap.org/lookup?format=jsonv2&osm_ids=${el.type[0].toUpperCase()}${el.id}`,{},15000); const j=await r.json(); bb=j[0].boundingbox.map(Number); }
+    const pad=0.0012, b=[bb[0]-pad,bb[1]+pad,bb[2]-pad,bb[3]+pad];
+    if((b[1]-b[0])*(b[3]-b[2])>0.2) throw new Error('campo troppo grande');
+    let raw; try{ raw=await osmMap(b); }catch(e){ raw=await overpassMap(b); }
+    const els=raw.map(e=>({k:e.type, g:e.tags.golf||null, w:e.tags.natural==='water', ref:e.tags.ref||null, par:e.tags.par||null, hcp:e.tags.handicap||null,
+      geo:e.g.map(p=>[+p[0].toFixed(6),+p[1].toFixed(6)])}));
+    data={v:3, id:el.type+el.id, src:{type:el.type,id:el.id,bbox:bb}, name:(el.tags&&el.tags.name)||'Campo',
+      bounds:[[bb[0],bb[2]],[bb[1],bb[3]]], els};
     store.set(key,data);
-    const saved=store.get('saved',[]); if(!saved.find(x=>x.id===data.id)){ saved.push({id:data.id,name:data.name}); store.set('saved',saved); }
+    const saved=store.get('saved',[]).filter(x=>x.id!==data.id); saved.push({id:data.id,name:data.name}); store.set('saved',saved);
+    $('#toast').hidden=true;
   }
   layers.courses.clearLayers();
   buildCourse(data);
@@ -395,7 +416,11 @@ function buildCourse(data){
   for(const h of holes){
     const end=h.line[h.line.length-1]; let best=null, bd=Infinity;
     for(const g of greens){ const d=minDistPoly(end,g); if(d<bd){bd=d;best=g;} }
-    h.green = bd<60 ? best : null; h.end=end; h.tee=h.line[0];
+    h.end=end; h.tee=h.line[0];
+    if(bd<60) h.green=best;
+    else { const ax=h.line.length>1?bearing(h.line[h.line.length-2],end):0; // green non disegnato: ovale stimato 28 x 22 m
+      h.green=[]; for(let k=0;k<24;k++){ const a=k*15; const r=1/Math.sqrt((Math.cos(rad(a))/14)**2+(Math.sin(rad(a))/11)**2); h.green.push(offset(end,ax+a,r)); }
+      h.greenEst=true; }
   }
   S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, holes, greens, hazards, free:holes.length===0};
   S.slopes=store.get('slopes.'+data.id,{});
@@ -435,11 +460,11 @@ function courseRow(el, box){
 async function openCourseEl(el){ closeSheets(); try{ await loadCourse(el); }catch(e){ toast('Non riesco a scaricare il campo, riprova'); } }
 async function discover(){
   if(!S.me) return;
-  $('#nearList').innerHTML='<p class="hint">Cerco i campi entro 30 km…</p>';
+  $('#nearList').innerHTML='<p class="hint">Cerco i campi vicini…</p>';
   try{
     const list=await nearCourses(S.me); S.near=list;
     const box=$('#nearList'); box.innerHTML='';
-    if(!list.length) box.innerHTML='<p class="hint">Nessun campo entro 30 km.</p>';
+    if(!list.length) box.innerHTML='<p class="hint">Nessun campo trovato qui vicino.</p>';
     list.slice(0,15).forEach(el=>courseRow(el,box));
     return list;
   }catch(e){ $('#nearList').innerHTML='<p class="hint">Ricerca non riuscita. Controlla la connessione.</p>'; return []; }
@@ -457,7 +482,7 @@ async function startupWithFix(){
   }
   if(S.course) return;
   drawNear(list);
-  const pts=[S.me, ...list.slice(0,8).map(ctr)];
+  const pts=[S.me, ...list.slice(0,8).map(ctr)].filter(Boolean);
   map.fitBounds(pts,{paddingTopLeft:[30,90],paddingBottomRight:[30,240],maxZoom:13});
   $('#courseName').textContent='Scegli un campo';
   $('#holeNum').textContent=list.length?list.length+' campi vicini':'Nessun campo vicino';
@@ -493,7 +518,7 @@ function showHole(fit){
   $('#holeNum').textContent='Buca '+h.ref; $('#holePar').textContent='Par '+par+(si?' · HCP '+si:'');
   store.set('hole.'+S.course.id, S.hole);
   if(h.line) L.polyline(h.line,{color:'#fff',weight:2,opacity:.55,dashArray:'6 8',interactive:false}).addTo(layers.hole);
-  if(h.green) L.polygon(h.green,{color:'#ffd23f',weight:2.5,fillOpacity:.15,interactive:false}).addTo(layers.hole);
+  if(h.green) L.polygon(h.green,{color:'#ffd23f',weight:2.5,fillOpacity:.15,dashArray:h.greenEst?'6 6':null,interactive:false}).addTo(layers.hole);
   const pp=pinPos();
   if(pp){
     // cerchi di distanza dalla bandiera
@@ -567,7 +592,7 @@ function enterGreenView(){
   map.fitBounds(h.green,{paddingTopLeft:[20,190],paddingBottomRight:[20,260],maxZoom:21});
   drawSlopeField();
   const ext=greenExtent(h), depth=Math.round(ext.back+ext.front), width=Math.round(ext.left+ext.right);
-  $('#gTitle').textContent=`Green buca ${h.ref} · profondo ${depth} m · largo ${width} m`;
+  $('#gTitle').textContent= h.greenEst ? `Green buca ${h.ref} · forma stimata (non disegnato sulla mappa)` : `Green buca ${h.ref} · profondo ${depth} m · largo ${width} m`;
   const pp=pinPos(), c=centroid(h.green);
   let s=slopeText()||'Pendenza non ancora segnata';
   if(S.round.pins[holeKey()]){ const into=Math.round(ext.front + (proj(c).to(pp)[0]*Math.sin(rad(ext.ax))+proj(c).to(pp)[1]*Math.cos(rad(ext.ax))));
@@ -672,7 +697,7 @@ function update(){
   }
   const far = pinD!=null && pinD>1500;
   if(far){ front=back=null; }
-  $('#dFront').textContent=fmt(front); $('#dBack').textContent=fmt(back);
+  const est=h&&h.greenEst&&front!=null; $('#dFront').textContent=(est?'≈':'')+fmt(front); $('#dBack').textContent=(est?'≈':'')+fmt(back);
   $('#dPin').textContent = far ? (pinD/1000).toFixed(pinD<10000?1:0).replace('.',',')+' km' : fmt(pinD);
   $('#pinLbl').textContent = S.round&&S.round.pins[holeKey()] ? 'Bandiera' : (h&&h.green?'Centro green':'Bandiera');
   $('#iTemp').textContent = S.wx ? Math.round(S.wx.temp)+'°C' : '—';
