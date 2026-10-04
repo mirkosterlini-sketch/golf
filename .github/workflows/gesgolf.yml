@@ -1,0 +1,27 @@
+name: Aggiorna cartellini GesGolf
+on:
+  schedule:
+    - cron: '17 4 * * 1'   # ogni lunedì mattina
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/gesgolf.mjs'
+      - '.github/workflows/gesgolf.yml'
+permissions:
+  contents: write
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node scripts/gesgolf.mjs
+      - name: Salva i dati se sono cambiati
+        run: |
+          git config user.name "aggiornamento-automatico"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/gesgolf.json
+          git diff --cached --quiet || (git commit -m "Aggiorna cartellini GesGolf" && git push)
