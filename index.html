@@ -492,9 +492,12 @@ function update(){
       if(inside(me,h.green)){ front=0; back=hits.length?hits[hits.length-1]:null; }
       else if(hits.length>=2){ front=hits[0]; back=hits[hits.length-1]; } }
   }
-  $('#dFront').textContent=fmt(front); $('#dBack').textContent=fmt(back); $('#dPin').textContent=fmt(pinD);
+  const far = pinD!=null && pinD>1500;
+  if(far){ front=back=null; }
+  $('#dFront').textContent=fmt(front); $('#dBack').textContent=fmt(back);
+  $('#dPin').textContent = far ? (pinD/1000).toFixed(pinD<10000?1:0)+' km' : fmt(pinD);
   $('#pinLbl').textContent = S.round&&S.round.pins[holeKey()] ? 'Bandiera' : (h&&h.green?'Centro green':'Bandiera');
-  if(me && pp){
+  if(me && pp && !far){
     needElev([me,pp]);
     const pl=playsLike(me,pp);
     $('#iPlays').textContent=pl.plays+' m'; $('#iClub').textContent=clubFor(pl.plays);
@@ -503,7 +506,7 @@ function update(){
   } else { ['#iPlays','#iClub','#iElev'].forEach(s=>$(s).textContent='—'); $('#iWind').textContent=S.wind?Math.round(S.wind.speed)+' km/h':'—'; }
   if(S.lastShot && me){ $('#iShotWrap').hidden=false; $('#iShot').textContent=fmt(dist(S.lastShot,me))+' m'; }
   drawTarget();
-  pushWatch(front,pinD,back);
+  if(!far) pushWatch(front,pinD,back);
 }
 
 /* ============ punto toccato ============ */
