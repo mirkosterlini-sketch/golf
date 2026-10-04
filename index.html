@@ -9,7 +9,6 @@
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAFXUlEQVR4nO3cPXIURxjH4V6KHGcEBESq0jGInPksnIWzKCPyMVRFpIBAGQSOcWCPPF7t13z22/0+T6gqpEH6/6ZnF9mHEsy7j+9/1b4GtvPz6flQ+xrGql6MsVNK3Sh2/8JGzyV7x7DbFzN8ptgrhM2/iOGzxNYhbPbJDZ81bRXC6p/U8NnS2iG8WfOTGT9bW3tjq9Rk+NSwxmmw+AQwfmpZY3uLAjB+alu6wdkBGD9RLNnirACMn2jmbnJyAMZPVHO2OSkA4ye6qRu9OQDjpxVTtnpTAMZPa27d7NUAjJ9W3bLdVX8VAlpzMQB3f1p3bcNnAzB+enFpyx6BSO1kAO7+9Obcpp0ApPYqAHd/enVq204AUvtfAO7+9O54404AUnsJwN2fLMZbdwKQmgBI7U0pHn/IZ9i8E4DUBEBqAiA1AZDawQvgfXx//PbqYx/u7ypcCWNOgB2cGv/w8R8P9ztfDWNva19A786Nf2wcwW9/PG55ORwRQDBi2JcAAhPD9rwGaMSPh3uvFzbgBGiMU2FdAmiYGJYTQCfEMI8AOiSG2wmgc2K4zLtAiXgn6TUnQEJOhf8IILnsMQiAFxljEAAnZYlBAFzVcwzeBWKS3t5JcgIwSy+nggBYrOUYBMCqWotBAKyqhdGPCYDFWhv9mACYpeXRjwmASXoZ/kAAXNXb6McEwEk9j35MALzIMvoxASSXcfRjAkgo++jHBJCI4b8mgM4Z/WUC6JDR304AnTD6eQTQMKNfTgCNMfp1CaARhr8NAQRm9NsTQDBGvy8BBGD09fjfolT2191D7UtITQCkJgBSEwCpCYDUBEBqAiA1AZCaAEhNAKQmAFITAKkJgNQEQGoCIDUBkJoASE0ApCYAUhMAqQmA1ARAagIgNQGQmgBITQCkJgBSEwCpCYDUBEBqAiA1AZCaAEhNAKQmAFITAKkJgNQEQGoCIDUBkJoASE0ApCYAUhMAqQmA1ARAagIgNQGQmgBITQCkJgBSEwCpCYDUBEBqAiA1AZDa29oX0IPPXz9V+fNffv9z0ddFAGctHfUeplyjWE5LHUALI1/Lpb9r5jjSBJBp7FOd+t5kiaLbAAx+mePvX69BdBOAwW+r1yCaDsDo6xl/71uOobkAjD6elmNoJgDDb8Pwc2olhPABGH6bWgkhbACG34foIYQLwPD7FDWEUAH0PP4P93evPvb98VuFK6nr89dPoSII89ug2cZ/6eO9i/SzDhFApG/I2q6NXAR1hQgAaqkeQJQ7wRZufdaN9Ey8pwg/++oBQE0CIDUBkFr1AHp+/r31GTfCs3ANEX721QOAmkIEEOFOsJVrd3d3/7pCBFBKnG/IFs6N3PjrO5RSyruP73/VvpBB1lFkEWn8P5+eD+ECGAihL5GGPwgdwEAIbYs4/EETAQyE0JbIwx80FcBACLG1MPzBSwCltBXBQAwxtDT6wc+n50Mp/74LVEqbAYyJYV8tjn6suwCOCWJdrQ/+2KsASukvgjFBTNPb4MeG8ZeSKIBTRPGPnsd+ytkASskXwTm9xZFt5OeMx1+KAFZRKxajnu5qAKWIgD4dj7+UQL8NCjWcDOBUKdCyc5t2ApDa2QCcAvTi0pYvngAioHXXNuwRiNSuBuAUoFW3bPemE0AEtObWzd78CCQCWjFlq5NeA4iA6KZudPKLYBEQ1ZxtznoXSAREM3eTs98GFQFRLNnion8HEAG1Ld3g4n8IEwG1rLG9VcfrvyNgD2vedFf9VQinAVtbe2ObDdZpwJq2urlufscWAkts/VSx2yOLEJhir8fp3Z/ZhcAle7+OrPqiVQyUUvfNk3Dv2oiib9HeKfwbYTnE4Qwrn/YAAAAASUVORK5CYII=">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
 <style>
-[hidden]{display:none!important}
 /* Layout: mappa satellitare a tutto schermo, barra buca in alto, pannello distanze in basso.
    Pensata per la luce del sole: pannelli scuri opachi, numeri grandi ad alto contrasto. */
 :root{
@@ -104,15 +103,6 @@ table.score tr.cur{background:var(--ink-2)}
 .pinmk{font-size:30px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.7))}
 .tgt{width:22px;height:22px;border-radius:50%;border:3px solid #fff;background:rgba(255,255,255,.25)}
 .lbl{background:rgba(15,31,23,.88);color:#fff;border-radius:8px;padding:2px 7px;font:600 14px var(--num);white-space:nowrap;border:1px solid rgba(255,255,255,.3)}
-.fab{position:fixed;right:12px;z-index:520;width:48px;height:48px;border-radius:14px;background:var(--ink);color:var(--paper);
-  display:grid;place-items:center;font-size:12px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.4);border:1px solid var(--line)}
-.fab span{display:block;font-size:20px;line-height:1}
-.cmk{background:#fff;color:#123;border-radius:999px;padding:4px 10px 4px 6px;font:600 13px var(--txt);white-space:nowrap;
-  box-shadow:0 2px 6px rgba(0,0,0,.45);display:inline-flex;position:relative;align-items:center;gap:4px;transform:translate(-50%,-100%);cursor:pointer}
-.cmk:after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:#fff;border-bottom:0}
-.osmtiles{filter:saturate(.55) brightness(1.06)}
-.hnum{font:700 16px var(--txt);color:#1d3b26;text-shadow:0 0 3px #fff,0 0 3px #fff}
-.sat .hnum{color:#fff;text-shadow:0 0 3px #000,0 0 6px #000}
 .slope{font-size:34px;color:#fff;text-shadow:0 0 4px #000,0 0 8px #000;line-height:1}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -132,7 +122,6 @@ table.score tr.cur{background:var(--ink-2)}
   <button class="iconbtn" id="btnCourse" aria-label="Scegli campo">⛳</button>
 </header>
 
-<button class="fab" id="btnView" style="top:calc(env(safe-area-inset-top,0px) + 130px)" aria-label="Cambia vista"><div><span>🗺</span>Mappa</div></button>
 <div id="mode" hidden><span id="modeText"></span><button id="modeEnd">Fine</button></div>
 <div id="toast" hidden></div>
 
@@ -228,7 +217,6 @@ table.score tr.cur{background:var(--ink-2)}
 const APPICON="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAFXUlEQVR4nO3cPXIURxjH4V6KHGcEBESq0jGInPksnIWzKCPyMVRFpIBAGQSOcWCPPF7t13z22/0+T6gqpEH6/6ZnF9mHEsy7j+9/1b4GtvPz6flQ+xrGql6MsVNK3Sh2/8JGzyV7x7DbFzN8ptgrhM2/iOGzxNYhbPbJDZ81bRXC6p/U8NnS2iG8WfOTGT9bW3tjq9Rk+NSwxmmw+AQwfmpZY3uLAjB+alu6wdkBGD9RLNnirACMn2jmbnJyAMZPVHO2OSkA4ye6qRu9OQDjpxVTtnpTAMZPa27d7NUAjJ9W3bLdVX8VAlpzMQB3f1p3bcNnAzB+enFpyx6BSO1kAO7+9Obcpp0ApPYqAHd/enVq204AUvtfAO7+9O54404AUnsJwN2fLMZbdwKQmgBI7U0pHn/IZ9i8E4DUBEBqAiA1AZDawQvgfXx//PbqYx/u7ypcCWNOgB2cGv/w8R8P9ztfDWNva19A786Nf2wcwW9/PG55ORwRQDBi2JcAAhPD9rwGaMSPh3uvFzbgBGiMU2FdAmiYGJYTQCfEMI8AOiSG2wmgc2K4zLtAiXgn6TUnQEJOhf8IILnsMQiAFxljEAAnZYlBAFzVcwzeBWKS3t5JcgIwSy+nggBYrOUYBMCqWotBAKyqhdGPCYDFWhv9mACYpeXRjwmASXoZ/kAAXNXb6McEwEk9j35MALzIMvoxASSXcfRjAkgo++jHBJCI4b8mgM4Z/WUC6JDR304AnTD6eQTQMKNfTgCNMfp1CaARhr8NAQRm9NsTQDBGvy8BBGD09fjfolT2191D7UtITQCkJgBSEwCpCYDUBEBqAiA1AZCaAEhNAKQmAFITAKkJgNQEQGoCIDUBkJoASE0ApCYAUhMAqQmA1ARAagIgNQGQmgBITQCkJgBSEwCpCYDUBEBqAiA1AZCaAEhNAKQmAFITAKkJgNQEQGoCIDUBkJoASE0ApCYAUhMAqQmA1ARAagIgNQGQmgBITQCkJgBSEwCpCYDUBEBqAiA1AZDa29oX0IPPXz9V+fNffv9z0ddFAGctHfUeplyjWE5LHUALI1/Lpb9r5jjSBJBp7FOd+t5kiaLbAAx+mePvX69BdBOAwW+r1yCaDsDo6xl/71uOobkAjD6elmNoJgDDb8Pwc2olhPABGH6bWgkhbACG34foIYQLwPD7FDWEUAH0PP4P93evPvb98VuFK6nr89dPoSII89ug2cZ/6eO9i/SzDhFApG/I2q6NXAR1hQgAaqkeQJQ7wRZufdaN9Ey8pwg/++oBQE0CIDUBkFr1AHp+/r31GTfCs3ANEX721QOAmkIEEOFOsJVrd3d3/7pCBFBKnG/IFs6N3PjrO5RSyruP73/VvpBB1lFkEWn8P5+eD+ECGAihL5GGPwgdwEAIbYs4/EETAQyE0JbIwx80FcBACLG1MPzBSwCltBXBQAwxtDT6wc+n50Mp/74LVEqbAYyJYV8tjn6suwCOCWJdrQ/+2KsASukvgjFBTNPb4MeG8ZeSKIBTRPGPnsd+ytkASskXwTm9xZFt5OeMx1+KAFZRKxajnu5qAKWIgD4dj7+UQL8NCjWcDOBUKdCyc5t2ApDa2QCcAvTi0pYvngAioHXXNuwRiNSuBuAUoFW3bPemE0AEtObWzd78CCQCWjFlq5NeA4iA6KZudPKLYBEQ1ZxtznoXSAREM3eTs98GFQFRLNnion8HEAG1Ld3g4n8IEwG1rLG9VcfrvyNgD2vedFf9VQinAVtbe2ObDdZpwJq2urlufscWAkts/VSx2yOLEJhir8fp3Z/ZhcAle7+OrPqiVQyUUvfNk3Dv2oiib9HeKfwbYTnE4Qwrn/YAAAAASUVORK5CYII=";
 /* ============ utilità ============ */
 const $ = s => document.querySelector(s);
-const esc = t => String(t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const store = {
   get(k, d){ try{ const v = localStorage.getItem('golf.'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
   set(k, v){ try{ localStorage.setItem('golf.'+k, JSON.stringify(v)); }catch(e){} }
@@ -302,88 +290,31 @@ if(!S.round || S.round.date!==today()) S.round=null;
 
 /* ============ mappa ============ */
 const map = L.map('map',{zoomControl:false, attributionControl:true, maxZoom:21}).setView([44.4,8.9],9);
-const TILES={
-  sat:L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {maxNativeZoom:19, maxZoom:21, attribution:'Immagini © Esri · Campi © OpenStreetMap'}),
-  map:L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {maxNativeZoom:19, maxZoom:21, className:'osmtiles', attribution:'© OpenStreetMap'})
-};
-let VIEW=store.get('view','sat');
-const layers = { courses:L.layerGroup().addTo(map), course:L.layerGroup().addTo(map), hole:L.layerGroup().addTo(map), live:L.layerGroup().addTo(map) };
-function setView(v){
-  VIEW=v; store.set('view',v);
-  Object.values(TILES).forEach(t=>map.removeLayer(t)); TILES[v].addTo(map);
-  document.body.classList.toggle('sat', v==='sat');
-  $('#map').style.background = v==='sat' ? '#203028' : '#e8efe3';
-  $('#btnView').innerHTML = v==='sat' ? '<div><span>🗺</span>Mappa</div>' : '<div><span>🛰</span>Satell.</div>';
-  if(S.course){ drawCourse(); showHole(false); }
-}
-setView(VIEW);
-$('#btnView').onclick=()=>setView(VIEW==='sat'?'map':'sat');
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxNativeZoom:19, maxZoom:21, attribution:'Immagini © Esri · Campi © OpenStreetMap'}).addTo(map);
+const layers = { course:L.layerGroup().addTo(map), hole:L.layerGroup().addTo(map), live:L.layerGroup().addTo(map) };
 const icon = (cls, html='', size=[34,34], anchor=[17,17]) => L.divIcon({className:'', html:`<div class="${cls}">${html}</div>`, iconSize:size, iconAnchor:anchor});
 let meMk=null, pinMk=null, tgtMk=null, tgtLines=null, slopeMk=null;
 
 /* ============ OpenStreetMap / Overpass ============ */
-const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter',
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
-// fetch con tempo massimo: se un server non risponde, si passa al successivo invece di restare bloccati
-async function fetchT(url, opt={}, ms=20000){
-  const ac=new AbortController(), t=setTimeout(()=>ac.abort(), ms);
-  try{ return await fetch(url,{...opt, signal:ac.signal}); } finally{ clearTimeout(t); }
-}
-async function overpass(q, ms=20000){
+const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+async function overpass(q){
   let err;
   for(const url of OVERPASS){
-    try{ const r=await fetchT(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}}, ms);
+    try{ const r=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
       if(r.ok) return await r.json(); err=new Error('HTTP '+r.status); }catch(e){ err=e; }
   }
   throw err;
 }
-// Nominatim: ricerca per nome veloce, restituisce anche i confini del campo
-const nomCache={};
-async function nominatim(params){
-  if(nomCache[params]) return nomCache[params];
-  const r=await fetchT('https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language=it&'+(params.includes('limit=')?'':'limit=20&')+params, {}, 12000);
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  const out=(await r.json()).filter(x=>x.type==='golf_course' && x.osm_type!=='node').map(x=>({
-    type:x.osm_type, id:x.osm_id, center:{lat:+x.lat, lon:+x.lon},
-    tags:{name:x.name||x.display_name.split(',')[0], 'addr:city':(x.display_name.split(',').slice(-5,-4)[0]||'').trim()},
-    bb:{minlat:+x.boundingbox[0], maxlat:+x.boundingbox[1], minlon:+x.boundingbox[2], maxlon:+x.boundingbox[3]} }));
-  return nomCache[params]=out;
-}
 const NORD_ITALIA='(43.5,6.6,46.7,12.6)';
 async function searchCourses(name){
-  const seen=new Set(), res=[];
-  for(const q of ['campo da golf '+name, name+' golf', name]){
-    try{ for(const x of await nominatim('countrycodes=it&q='+encodeURIComponent(q))){ const k=x.type+x.id; if(!seen.has(k)){ seen.add(k); res.push(x); } } }catch(e){}
-    if(res.length) return res;
-  }
   const safe=name.replace(/["\\]/g,'');
-  const j=await overpass(`[out:json][timeout:20];nwr["leisure"="golf_course"]["name"~"${safe}",i]${NORD_ITALIA};out center tags;`, 12000);
+  const j=await overpass(`[out:json][timeout:25];nwr["leisure"="golf_course"]["name"~"${safe}",i]${NORD_ITALIA};out center tags;`);
   return j.elements;
 }
 async function nearCourses(p){
-  const sortP=l=>l.sort((a,b)=>dist(p,ctr(a))-dist(p,ctr(b)));
-  const d=0.15, vb=[p[1]-d*1.4,p[0]+d,p[1]+d*1.4,p[0]-d].map(v=>v.toFixed(4)).join(',');
-  try{ const r=await nominatim('bounded=1&viewbox='+vb+'&q='+encodeURIComponent('campo da golf')); if(r.length) return sortP(r); }catch(e){}
-  const j=await overpass(`[out:json][timeout:20];nwr["leisure"="golf_course"](around:15000,${p[0]},${p[1]});out center tags;`, 12000);
-  return sortP(j.elements);
-}
-// dati del campo dall'API principale di OpenStreetMap (più affidabile di Overpass)
-async function osmMap(b){
-  const r=await fetchT(`https://api.openstreetmap.org/api/0.6/map.json?bbox=${b.minlon},${b.minlat},${b.maxlon},${b.maxlat}`, {}, 40000);
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  const all=(await r.json()).elements, nodes={}, ways={};
-  all.forEach(e=>{ if(e.type==='node') nodes[e.id]=e; else if(e.type==='way') ways[e.id]=e; });
-  const wgeo=w=>w.nodes.map(id=>nodes[id]).filter(Boolean).map(n=>({lat:n.lat,lon:n.lon}));
-  const want=t=>t && (t.golf || t.natural==='water');
-  const out=[];
-  all.forEach(e=>{
-    if(!want(e.tags)) return;
-    if(e.type==='way') out.push({type:'way', tags:e.tags, geometry:wgeo(e)});
-    else if(e.type==='relation') out.push({type:'relation', tags:e.tags, members:(e.members||[]).filter(m=>m.type==='way'&&ways[m.ref]).map(m=>({role:m.role, geometry:wgeo(ways[m.ref])}))});
-  });
-  return {elements:out};
+  const j=await overpass(`[out:json][timeout:25];nwr["leisure"="golf_course"](around:15000,${p[0]},${p[1]});out center tags;`);
+  return j.elements.sort((a,b)=>dist(p,ctr(a))-dist(p,ctr(b)));
 }
 const ctr = e => e.center ? [e.center.lat,e.center.lon] : [e.lat,e.lon];
 function geomOf(el){
@@ -397,13 +328,10 @@ async function loadCourse(el){
   let data=store.get(key,null);
   if(!data){
     toast('Scarico i dati del campo…', 8000);
-    let b=el.bb;
-    if(!b){ const bb=await overpass(`[out:json][timeout:25];${el.type}(${el.id});out bb;`, 15000); b=bb.elements[0] && bb.elements[0].bounds; }
-    if(!b) throw new Error('confini non trovati');
+    const bb=await overpass(`[out:json][timeout:25];${el.type}(${el.id});out bb;`);
+    const b=bb.elements[0] && bb.elements[0].bounds; if(!b) throw new Error('confini non trovati');
     const pad=0.0015, box=`(${b.minlat-pad},${b.minlon-pad},${b.maxlat+pad},${b.maxlon+pad})`;
-    let j;
-    try{ j=await osmMap({minlat:b.minlat-pad,minlon:b.minlon-pad,maxlat:b.maxlat+pad,maxlon:b.maxlon+pad}); }
-    catch(e){ j=await overpass(`[out:json][timeout:40];(nwr["golf"]${box};way["natural"="water"]${box};relation["natural"="water"]${box};);out geom${box};`, 45000); }
+    const j=await overpass(`[out:json][timeout:40];(nwr["golf"]${box};way["natural"="water"]${box};relation["natural"="water"]${box};);out geom${box};`);
     // versione compatta, così resta salvata sul telefono e funziona anche senza campo
     const els=[];
     for(const e of j.elements){ const geo=geomOf(e); if(!geo||geo.length<2) continue; const t=e.tags||{};
@@ -415,14 +343,11 @@ async function loadCourse(el){
   buildCourse(data);
 }
 function buildCourse(data){
-  const greens=[], tees=[], hazards=[], holes=[], fairways=[], roughs=[], paths=[];
+  const greens=[], tees=[], hazards=[], holes=[];
   for(const e of data.els){
     const g=e.g, geo=e.geo;
     if(g==='green') greens.push(geo);
     else if(g==='tee') tees.push(geo);
-    else if(g==='fairway') fairways.push(geo);
-    else if(g==='rough'||g==='driving_range') roughs.push(geo);
-    else if(g==='cartpath'||g==='path') paths.push(geo);
     else if(g==='bunker') hazards.push({type:'sand',poly:geo});
     else if(g==='water_hazard'||g==='lateral_water_hazard'||e.w) hazards.push({type:'water',poly:geo});
     else if(g==='hole' && e.k==='way'){
@@ -436,8 +361,7 @@ function buildCourse(data){
     h.green = bd<60 ? best : null;
     h.end = end; h.tee=h.line[0];
   }
-  S.course={id:data.id, name:data.name, bounds:data.bounds, holes, greens, hazards, tees, fairways, roughs, paths, free:holes.length===0};
-  layers.courses.clearLayers();
+  S.course={id:data.id, name:data.name, bounds:data.bounds, holes, greens, hazards, free:holes.length===0};
   S.slopes=store.get('slopes.'+data.id,{});
   store.set('lastCourse', data.id);
   if(!S.round || S.round.course!==data.id) newRound();
@@ -450,43 +374,10 @@ function buildCourse(data){
 function drawCourse(){
   layers.course.clearLayers();
   const c=S.course;
-  const P=(g,o)=>L.polygon(g,Object.assign({interactive:false},o)).addTo(layers.course);
-  if(VIEW==='sat'){
-    c.greens.forEach(g=>P(g,{color:'#7ed957',weight:1.5,fillOpacity:.12}));
-    c.hazards.forEach(h=>P(h.poly,{color:h.type==='water'?'#5ab4ff':'#e8c98a',weight:1,fillOpacity:.08}));
-  } else {
-    // vista disegnata, stile scheda del campo
-    (c.roughs||[]).forEach(g=>P(g,{stroke:false,fillColor:'#a9dc93',fillOpacity:1}));
-    c.hazards.filter(h=>h.type==='water').forEach(h=>P(h.poly,{color:'#6bb8e8',weight:1,fillColor:'#9fd8fb',fillOpacity:1}));
-    (c.paths||[]).forEach(g=>L.polyline(g,{color:'#fff',weight:4,opacity:.9,interactive:false}).addTo(layers.course));
-    (c.fairways||[]).forEach(g=>P(g,{color:'#3f7d3a',weight:1,fillColor:'#8bcf5f',fillOpacity:1}));
-    (c.tees||[]).forEach(g=>P(g,{color:'#3f7d3a',weight:1,fillColor:'#8bcf5f',fillOpacity:1}));
-    c.greens.forEach(g=>P(g,{color:'#3f7d3a',weight:1,fillColor:'#c8efb0',fillOpacity:1}));
-    c.holes.filter(h=>!h.green).forEach(h=>L.circle(h.end,{radius:13,color:'#3f7d3a',weight:1,fillColor:'#c8efb0',fillOpacity:1,interactive:false}).addTo(layers.course));
-    c.hazards.filter(h=>h.type==='sand').forEach(h=>P(h.poly,{color:'#b49a5f',weight:1,fillColor:'#f6e7bf',fillOpacity:1}));
-  }
-  // numero buca vicino al tee
-  c.holes.forEach(h=>L.marker(h.tee,{icon:L.divIcon({className:'',html:`<div class="hnum">${h.ref}</div>`,iconSize:[24,20],iconAnchor:[12,24]}),interactive:false}).addTo(layers.course));
+  c.greens.forEach(g=>L.polygon(g,{color:'#7ed957',weight:1.5,fillOpacity:.12,interactive:false}).addTo(layers.course));
+  c.hazards.forEach(h=>L.polygon(h.poly,{color:h.type==='water'?'#5ab4ff':'#e8c98a',weight:1,fillOpacity:.08,interactive:false}).addTo(layers.course));
   $('#courseName').textContent=c.name;
 }
-
-/* ============ campi intorno, con il nome ============ */
-let nearT=null; const shownCourses={};
-function showCoursesAround(){
-  clearTimeout(nearT);
-  nearT=setTimeout(async()=>{
-    const z=map.getZoom(); if(z<8) return;
-    if(S.course && z>=15) { layers.courses.clearLayers(); return; }
-    const b=map.getBounds(), vb=[b.getWest(),b.getNorth(),b.getEast(),b.getSouth()].map(v=>v.toFixed(3)).join(',');
-    try{ const list=await nominatim('bounded=1&limit=50&viewbox='+vb+'&q='+encodeURIComponent('campo da golf'));
-      list.forEach(el=>{ const k=el.type+el.id; if(shownCourses[k]&&layers.courses.hasLayer(shownCourses[k])) return;
-        const m=L.marker(ctr(el),{icon:L.divIcon({className:'',html:'<div class="cmk">⛳ '+esc(el.tags.name)+'</div>',iconSize:[0,0]})});
-        m.on('click',()=>confirmBox(el.tags.name,'Apro questo campo?',async()=>{ try{ await loadCourse(el); toast(el.tags.name); }catch(e){ toast('Non riesco a scaricare il campo, riprova'); } }));
-        shownCourses[k]=m.addTo(layers.courses); });
-    }catch(e){}
-  }, 900);
-}
-map.on('moveend', showCoursesAround);
 
 /* ============ buca corrente ============ */
 function freeKey(){ return 'f'+S.hole; }
@@ -504,8 +395,8 @@ function showHole(fit){
   const par = h.par || (S.round.scores[holeKey()]||{}).par || null;
   $('#holeNum').textContent='Buca '+h.ref; $('#holePar').textContent=par?'Par '+par:'';
   if(S.course) store.set('hole.'+S.course.id, S.hole);
-  if(h.line) L.polyline(h.line,{color:VIEW==='sat'?'#fff':'#1d3b26',weight:2,opacity:VIEW==='sat'?.55:.7,dashArray:'6 8',interactive:false}).addTo(layers.hole);
-  if(h.green) L.polygon(h.green,{color:VIEW==='sat'?'#ffd23f':'#d9a400',weight:2.5,fillOpacity:VIEW==='sat'?.15:0,interactive:false}).addTo(layers.hole);
+  if(h.line) L.polyline(h.line,{color:'#fff',weight:2,opacity:.55,dashArray:'6 8',interactive:false}).addTo(layers.hole);
+  if(h.green) L.polygon(h.green,{color:'#ffd23f',weight:2.5,fillOpacity:.15,interactive:false}).addTo(layers.hole);
   const pp=pinPos();
   if(pp){ pinMk=L.marker(pp,{icon:icon('pinmk','⛳',[32,32],[9,30]),draggable:true,zIndexOffset:900}).addTo(layers.hole);
     pinMk.on('dragend',()=>{ const ll=pinMk.getLatLng(); setPin([ll.lat,ll.lng]); }); }
