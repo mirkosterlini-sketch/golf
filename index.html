@@ -335,8 +335,10 @@ const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.ku
 async function overpass(q){
   let err;
   for(const url of OVERPASS){
-    try{ const r=await fetch(url,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
-      if(r.ok) return await r.json(); err=new Error('HTTP '+r.status); }catch(e){ err=e; }
+    const ac=new AbortController(), tm=setTimeout(()=>ac.abort(), 20000);
+    try{ const r=await fetch(url,{method:'POST',signal:ac.signal,body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
+      if(r.ok){ const j=await r.json(); clearTimeout(tm); return j; } err=new Error('HTTP '+r.status); }catch(e){ err=e; }
+    clearTimeout(tm);
   }
   throw err;
 }
@@ -347,7 +349,7 @@ async function searchCourses(name){
   const j=await overpass(`[out:json][timeout:25];nwr["leisure"="golf_course"]["name"~"${safe}",i]${ITALIA};out center tags;`);
   return j.elements.filter(e=>e.tags&&e.tags.name);
 }
-async function nearCourses(p, radius=50000){
+async function nearCourses(p, radius=30000){
   const j=await overpass(`[out:json][timeout:25];nwr["leisure"="golf_course"](around:${radius},${p[0]},${p[1]});out center tags;`);
   return j.elements.filter(e=>e.tags&&e.tags.name).sort((a,b)=>dist(p,ctr(a))-dist(p,ctr(b)));
 }
@@ -433,16 +435,20 @@ function courseRow(el, box){
 async function openCourseEl(el){ closeSheets(); try{ await loadCourse(el); }catch(e){ toast('Non riesco a scaricare il campo, riprova'); } }
 async function discover(){
   if(!S.me) return;
-  $('#nearList').innerHTML='<p class="hint">Cerco i campi entro 50 km…</p>';
+  $('#nearList').innerHTML='<p class="hint">Cerco i campi entro 30 km…</p>';
   try{
     const list=await nearCourses(S.me); S.near=list;
     const box=$('#nearList'); box.innerHTML='';
-    if(!list.length) box.innerHTML='<p class="hint">Nessun campo entro 50 km.</p>';
+    if(!list.length) box.innerHTML='<p class="hint">Nessun campo entro 30 km.</p>';
     list.slice(0,15).forEach(el=>courseRow(el,box));
     return list;
   }catch(e){ $('#nearList').innerHTML='<p class="hint">Ricerca non riuscita. Controlla la connessione.</p>'; return []; }
 }
 async function startupWithFix(){
+  map.setView(S.me, 14);
+  $('#courseName').textContent='Cerco i campi vicini…';
+  for(const sv of store.get('saved',[])){ const d=store.get('course.'+sv.id,null);
+    if(d && dist(S.me,centroid(d.bounds))<2000){ buildCourse(d); discover(); return; } }
   const list=await discover()||[];
   const onCourse=list.find(el=>dist(S.me,ctr(el))<2000);
   if(onCourse){
