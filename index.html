@@ -334,11 +334,13 @@ function minDistPoly(pt, poly){ if(inside(pt,poly)) return 0; return distToPolyl
 const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
 
 /* ============ stato ============ */
-const DEFAULT_CLUBS = [["Driver",200],["Legno 3",180],["Ibrido",165],["Ferro 5",155],["Ferro 6",145],["Ferro 7",135],
-  ["Ferro 8",125],["Ferro 9",115],["PW",100],["GW",85],["SW",70],["LW",55]];
+// distanze di volo di Mirko (metri)
+const DEFAULT_CLUBS = [["Driver",200],["Legno 3",190],["Legno 5",180],["Ferro 5",165],["Ferro 6",160],["Ferro 7",150],
+  ["Ferro 8",140],["Ferro 9",120],["PW",105],["Wedge 50°",90],["Wedge 56°",65],["Wedge 60°",45]];
+const OLD_DEFAULT='[["Driver",200],["Legno 3",180],["Ibrido",165],["Ferro 5",155],["Ferro 6",145],["Ferro 7",135],["Ferro 8",125],["Ferro 9",115],["PW",100],["GW",85],["SW",70],["LW",55]]';
 const S = {
   course:null, hole:0, me:null, acc:null, sim:false, target:null, mode:null, view:'hole',
-  wx:null, elev:{}, clubs:store.get('clubs',DEFAULT_CLUBS), phcp:store.get('phcp',20),
+  wx:null, elev:{}, clubs:(c=>!c||JSON.stringify(c)===OLD_DEFAULT?DEFAULT_CLUBS:c)(store.get('clubs',null)), phcp:store.get('phcp',20),
   round:store.get('round',null), slopes:{}, watch:false, lastShot:null, near:[], scoreHole:0,
   index:store.get('index',19.4), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
 };
