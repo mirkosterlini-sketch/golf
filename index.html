@@ -232,6 +232,7 @@ table.score tr{cursor:pointer}
   <h2>Altro</h2>
   <div class="row"><div class="grow"><b>Cartellino ufficiale</b><div class="hint" id="gesState">Par, HCP e lunghezze da GesGolf</div></div><button class="btn" id="gesBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Disegna o correggi questa buca</b><div class="hint">Tocchi tee e green sulla foto satellitare</div></div><button class="btn" id="drawBtn">Disegna</button></div>
+  <div class="row"><div class="grow"><b>Impara mentre giochi</b><div class="hint" id="learnState">Salva da solo green e tee che mancano sulla mappa</div></div><button class="btn" id="learnBtn">Attivo</button></div>
   <div class="row"><div class="grow"><b>Sono sul green</b><div class="hint">Salva la posizione esatta del green di questa buca</div></div><button class="btn" id="hereBtn">Salva</button></div>
   <div class="row"><div class="grow"><b>Ostacoli di questa buca</b><div class="hint">Bunker e acqua: quanto manca e quanto per superarli</div></div><button class="btn" id="openHaz">Apri</button></div>
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
@@ -597,6 +598,7 @@ function holeSI(i){ const h=S.course&&S.course.holes[i]; return (h&&h.si) || ((S
 function holeLen(h){ const k=teeIndex(); return h&&h.len&&k>=0 ? h.len[k] : null; }
 function showHole(fit){
   exitGreenView(false);
+  if(!S.course || S.shownHole!==S.course.id+':'+S.hole){ S.holeStart=S.me||null; S.visitedGreen=null; S.shownHole=S.course&&S.course.id+':'+S.hole; }
   const h=curHole(); layers.hole.clearLayers(); pinMk=null;
   if(!h){ return; }
   const par=holePar(S.hole), si=holeSI(S.hole), len=holeLen(h);
@@ -654,6 +656,42 @@ function changeHole(d){
   const n=c.holes.length;
   S.hole=(S.hole+d+n)%n; S.lastShot=null; $('#iShotWrap').hidden=true;
   showHole(true);
+}
+
+/* ============ impara mentre giochi ============ */
+// Se resti fermo ~1 minuto vicino alla fine di una buca senza green disegnato, quello è il green.
+// Se poi ti fermi ~20 secondi lontano dal green e la buca dopo non ha il tee, quello è il tee.
+let learnOn=store.get('learn',true), track=[], learned={};
+function stillFor(sec, radius){
+  const now=Date.now(), pts=track.filter(t=>now-t.t<=sec*1000);
+  if(pts.length<4 || now-pts[0].t < sec*1000*0.9) return null;
+  const c=centroid(pts.map(t=>t.p)); return pts.every(t=>dist(t.p,c)<=radius) ? c : null;
+}
+function learn(){
+  if(!learnOn || !S.course || S.sim && !S.learnInSim) return;
+  const h=curHole(); if(!h) return;
+  const key=S.course.id+':'+h.ref;
+  if(S.me && h.green && minDistPoly(S.me,h.green)<6) S.visitedGreen=S.hole; // sei passato sul green di questa buca
+  // green
+  if(!learned[key+':g'] && (h.greenEst || h.missing)){
+    const c=stillFor(60,12);
+    const far = c && S.holeStart && dist(c,S.holeStart)>80; // non è il punto dove hai iniziato la buca (il tee)
+    if(c && far && (h.missing || dist(c,h.end)<70) && (!h.tee || dist(c,h.tee)>60)){
+      const poly=S.course.greens.find(g=>inside(c,g)||minDistPoly(c,g)<4);
+      const ax = h.line&&h.line.length>1 ? bearing(h.line[h.line.length-2], c) : 0;
+      saveCustom(h.ref,{green: poly || ovalAt(c, ax)}); learned[key+':g']=c; S.visitedGreen=S.hole;
+      rebuildHoles(); showHole(false); toast('Ho imparato il green della buca '+h.ref); return;
+    }
+  }
+  // tee della buca successiva
+  const gpos = learned[key+':g'] || (h.green && centroid(h.green));
+  const nx=S.course.holes[S.hole+1];
+  if(nx && !nx.custom && !(nx.line) && gpos && S.visitedGreen===S.hole){
+    const c=stillFor(20,8);
+    if(c && dist(c,gpos)>40 && dist(c,gpos)<400 && !learned[S.course.id+':'+nx.ref+':t']){
+      saveCustom(nx.ref,{tee:c}); learned[S.course.id+':'+nx.ref+':t']=c;
+      rebuildHoles(); S.hole++; showHole(true); toast('Buca '+nx.ref+': tee imparato'); }
+  }
 }
 
 /* ============ disegno buche e "sono sul green" ============ */
@@ -887,7 +925,9 @@ function setMe(p, acc){
   S.me=p; S.acc=acc;
   if(!meMk) meMk=L.marker(p,{icon:divIcon('<div class="me"></div>',[20,20],[10,10]),zIndexOffset:1000,interactive:false}).addTo(layers.live);
   else meMk.setLatLng(p);
-  autoHole(); drawHazardLabels(); update();
+  if(!S.holeStart) S.holeStart=p;
+  track.push({p, t:Date.now()}); const cut=Date.now()-180000; while(track.length && track[0].t<cut) track.shift();
+  autoHole(); learn(); drawHazardLabels(); update();
 }
 let firstFix=true;
 function startGps(){
@@ -1059,6 +1099,8 @@ $('#gesBtn').onclick=()=>{ if(!S.course){ toast('Carica prima un campo'); return
 $('#drawBtn').onclick=startDraw;
 $('#hereBtn').onclick=()=>{ closeSheets(); iAmOnGreen(); };
 $('#gHere').onclick=iAmOnGreen;
+const learnLabel=()=>{ $('#learnBtn').textContent=learnOn?'Attivo':'Spento'; $('#learnBtn').classList.toggle('main',learnOn); };
+learnLabel(); $('#learnBtn').onclick=()=>{ learnOn=!learnOn; store.set('learn',learnOn); learnLabel(); };
 $('#openClubs').onclick=openClubs;
 $('#watchBtn').onclick=toggleWatch;
 $('#dlBtn').onclick=downloadTiles;
