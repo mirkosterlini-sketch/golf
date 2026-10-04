@@ -353,9 +353,17 @@ async function nearCourses(p){
 }
 async function searchCourses(name){
   let r=await nominatim(`limit=20&countrycodes=it&q=${encodeURIComponent('golf '+name)}`);
-  if(!r.length) r=await nominatim(`limit=20&countrycodes=it&q=${encodeURIComponent(name)}`);
-  if(!r.length){ const q=encodeURIComponent('[leisure=golf_course] '+name); r=await nominatim(`limit=20&countrycodes=it&q=${q}`); }
-  return r;
+  if(r.length) return r;
+  r=await nominatim(`limit=20&countrycodes=it&q=${encodeURIComponent(name)}`);
+  if(r.length) return r;
+  // il campo esiste ma non è segnato come "campo da golf": cerco attorno al primo risultato con quel nome
+  const any=await (await timeoutFetch('https://nominatim.openstreetmap.org/search?format=jsonv2&accept-language=it&limit=1&countrycodes=it&q='+encodeURIComponent(name),{},15000)).json();
+  if(!any.length) return [];
+  const lat=+any[0].lat, lon=+any[0].lon, vb=[lon-0.03,lat+0.02,lon+0.03,lat-0.02].map(v=>v.toFixed(4)).join(',');
+  r=await nominatim(`limit=5&bounded=1&viewbox=${vb}&q=${encodeURIComponent('[leisure=golf_course]')}`);
+  if(r.length) return r;
+  const nm=name.replace(/\b\w/g,c=>c.toUpperCase());
+  return [{type:'area', id:lat.toFixed(4)+'_'+lon.toFixed(4), center:{lat,lon}, tags:{name:nm}, bbox:[lat-0.008,lat+0.008,lon-0.011,lon+0.011]}];
 }
 async function osmMap(b){ // b: minlat,maxlat,minlon,maxlon → elementi con geometria
   const r=await timeoutFetch(`https://api.openstreetmap.org/api/0.6/map.json?bbox=${b[2]},${b[0]},${b[3]},${b[1]}`,{},40000);
