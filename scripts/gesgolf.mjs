@@ -4,7 +4,9 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const BASE = 'https://www.gesgolf.it/GolfOnline/Clubs/';
-const REGIONI = { 11: 'Liguria', 2: 'Lombardia', 14: 'Piemonte', 21: "Valle d'Aosta", 18: 'Toscana', 7: 'Emilia Romagna' };
+const REGIONI = { 11: 'Liguria', 2: 'Lombardia', 14: 'Piemonte', 21: "Valle d'Aosta", 18: 'Toscana', 7: 'Emilia Romagna',
+  22: 'Veneto', 9: 'Friuli', 19: 'Trentino', 10: 'Lazio', 12: 'Marche', 20: 'Umbria', 3: 'Abruzzo', 13: 'Molise', 6: 'Campania',
+  15: 'Puglia', 4: 'Basilicata', 5: 'Calabria', 17: 'Sicilia', 16: 'Sardegna', 8: 'Estero' };
 const PAUSA_MS = 1500; // una richiesta ogni secondo e mezzo, per non pesare sul sito
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
