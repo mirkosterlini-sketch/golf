@@ -281,7 +281,15 @@ const store = {
 const today = () => new Date().toISOString().slice(0,10);
 let toastT;
 function toast(msg, ms=2600){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true, ms); }
-function openSheet(id){ document.querySelectorAll('.sheet').forEach(s=>s.hidden=true); $(id).hidden=false; }
+function openSheet(id){ document.querySelectorAll('.sheet').forEach(s=>s.hidden=true); $(id).hidden=false;
+  try{ if(!history.state||!history.state.sheet) history.pushState({sheet:1},''); }catch(e){} }
+// tasto Indietro del telefono: chiude la finestra aperta o annulla la modalità, invece di uscire dall'app
+window.addEventListener('popstate',()=>{
+  const open=[...document.querySelectorAll('.sheet')].some(s=>!s.hidden);
+  if(open){ document.querySelectorAll('.sheet').forEach(s=>s.hidden=true); return; }
+  if(typeof S!=='undefined' && S.mode){ S.draw=null; setMode(null); return; }
+  if(typeof S!=='undefined' && S.view==='green'){ exitGreenView(true); return; }
+});
 function closeSheets(){ document.querySelectorAll('.sheet').forEach(s=>s.hidden=true); }
 document.querySelectorAll('.sheet').forEach(s=>{
   s.addEventListener('click', e=>{ if(e.target===s || e.target.hasAttribute('data-close')) s.hidden=true; });
@@ -739,6 +747,7 @@ $('#flagClear').onclick=()=>{ closeSheets(); delete S.round.pins[holeKey()]; sto
 
 /* ============ vista green ============ */
 function enterGreenView(){
+  if(S.view!=='green'){ try{ history.pushState({green:1},''); }catch(e){} }
   const h=curHole(); if(!h||!h.green){ toast(h?'Questo green non è disegnato sulla mappa':'Carica prima un campo'); return; }
   S.view='green'; $('#tGreen').classList.add('on');
   map.fitBounds(h.green,{paddingTopLeft:[20,190],paddingBottomRight:[20,260],maxZoom:21});
@@ -908,6 +917,7 @@ map.on('click', e=>{
   S.target=p; update();
 });
 function setMode(m){
+  if(m && !S.mode){ try{ history.pushState({mode:1},''); }catch(e){} }
   S.mode=m;
   const ref=curHole()?curHole().ref:'';
   const txt={flag:'Tocca il green dove vedi la bandiera',
