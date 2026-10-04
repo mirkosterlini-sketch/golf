@@ -843,6 +843,8 @@ function windText(parts){ if(!S.wx) return '—';
   const h=Math.round(parts.head), x=Math.round(parts.cross);
   const main = Math.abs(h)>=Math.abs(x) ? (h>=0?'contro ':'a favore ')+Math.abs(h) : (x>0?'da destra ':'da sinistra ')+Math.abs(x);
   return main+' km/h'+(S.wx.gust-S.wx.speed>8?' (raffiche '+Math.round(S.wx.gust)+')':''); }
+// freccia che indica dove soffia il vento: in alto = verso la bandiera (con la bandiera davanti a te)
+const windArrow=r=>S.wx?`<span style="display:inline-block;transform:rotate(${Math.round(r)}deg);margin-right:3px">↑</span>`:'';
 const sgn=v=>(v>0?'+':v<0?'−':'±')+Math.abs(Math.round(v));
 
 /* ============ distanze ============ */
@@ -870,11 +872,11 @@ function update(){
     const bits=[]; if(p.dh!=null && Math.abs(p.dh)>=1) bits.push('dislivello '+sgn(p.dh));
     if(Math.abs(p.wind)>=1) bits.push('vento '+sgn(p.wind)); if(Math.abs(p.temp)>=1) bits.push('temperatura '+sgn(p.temp));
     $('#brk').textContent=bits.join(' · ');
-    $('#iWind').textContent=windText(p);
+    $('#iWind').innerHTML=windArrow((S.wx?S.wx.dir+180:0)-bearing(me,pp))+esc(windText(p));
     $('#iElev').textContent = p.dh==null ? '—' : Math.abs(p.dh)<1 ? 'in piano' : (p.dh>0?Math.round(p.dh)+' m più alto':Math.round(-p.dh)+' m più basso');
   } else {
     $('#iPlays').textContent='—'; $('#iClub').textContent='—'; $('#brk').textContent=far?'Sei lontano dal campo':''; $('#iElev').textContent='—';
-    $('#iWind').textContent=S.wx?Math.round(S.wx.speed)+' km/h':'—';
+    $('#iWind').innerHTML=S.wx?windArrow(S.wx.dir+180)+Math.round(S.wx.speed)+' km/h':'—';
   }
   if(S.lastShot && me){ $('#iShotWrap').hidden=false; $('#iShot').textContent=fmt(dist(S.lastShot,me))+' m'; }
   drawTarget();
