@@ -783,6 +783,7 @@ function startGps(){
 }
 function noFix(){ if(S.course) return;
   const last=store.get('lastCourse',null), d=last&&store.get('course.'+last,null);
+  $('#nearList').innerHTML='<p class="hint">Posizione non disponibile: cerca il campo per nome qui sotto.</p>';
   if(d) buildCourse(d); else openSheet('#sCourse'); }
 function autoHole(){
   const c=S.course; if(!c||c.free||!S.me) return;
