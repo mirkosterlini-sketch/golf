@@ -139,11 +139,11 @@ table.score tr{cursor:pointer}
   <button class="iconbtn" id="btnCourse" aria-label="Scegli campo">⛳</button>
 </header>
 
-<div id="mode" hidden><span id="modeText"></span><button id="modeEnd">Fine</button></div>
+<div id="mode" hidden><span id="modeText"></span><button id="modeSkip" hidden>Salta</button><button id="modeEnd">Fine</button></div>
 <div id="gcard" hidden>
   <div class="t" id="gTitle"></div>
   <div class="s" id="gSub"></div>
-  <div class="b"><button id="gSlope">Pendenza</button><button id="gFlag">Bandiera</button><button class="main" id="gBack">Torna alla buca</button></div>
+  <div class="b"><button id="gSlope">Pendenza</button><button id="gFlag">Bandiera</button><button id="gHere">Sono sul green</button><button class="main" id="gBack">Torna alla buca</button></div>
 </div>
 <div id="toast" hidden></div>
 
@@ -217,7 +217,10 @@ table.score tr{cursor:pointer}
 <div class="sheet" id="sScore" hidden><div>
   <button class="close" data-close>×</button>
   <h2>Segnapunti</h2>
-  <div class="row"><div class="grow"><b>Handicap di gioco</b><div class="hint">I colpi che ricevi su questo campo</div></div>
+  <div class="row"><div class="grow"><b>Il tuo handicap</b><div class="hint">Index EGA</div></div>
+    <input type="number" inputmode="decimal" step="0.1" id="hindex" style="width:80px;text-align:center"></div>
+  <div id="teeRow"></div>
+  <div class="row"><div class="grow"><b>Handicap di gioco</b><div class="hint" id="phcpHint">I colpi che ricevi su questo campo</div></div>
     <input type="number" inputmode="numeric" id="phcp" style="width:80px;text-align:center"></div>
   <div class="card" id="holeCard"></div>
   <div class="totals" id="totals"></div>
@@ -227,6 +230,9 @@ table.score tr{cursor:pointer}
 <div class="sheet" id="sMore" hidden><div>
   <button class="close" data-close>×</button>
   <h2>Altro</h2>
+  <div class="row"><div class="grow"><b>Cartellino ufficiale</b><div class="hint" id="gesState">Par, HCP e lunghezze da GesGolf</div></div><button class="btn" id="gesBtn">Cambia</button></div>
+  <div class="row"><div class="grow"><b>Disegna o correggi questa buca</b><div class="hint">Tocchi tee e green sulla foto satellitare</div></div><button class="btn" id="drawBtn">Disegna</button></div>
+  <div class="row"><div class="grow"><b>Sono sul green</b><div class="hint">Salva la posizione esatta del green di questa buca</div></div><button class="btn" id="hereBtn">Salva</button></div>
   <div class="row"><div class="grow"><b>Ostacoli di questa buca</b><div class="hint">Bunker e acqua: quanto manca e quanto per superarli</div></div><button class="btn" id="openHaz">Apri</button></div>
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
   <div class="row"><div class="grow"><b>Scarica la mappa del campo</b><div class="hint" id="dlState">Così funziona anche dove non c'è segnale</div></div><button class="btn" id="dlBtn">Scarica</button></div>
@@ -237,6 +243,14 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Nuovo giro</b><div class="hint">Azzera segnapunti e bandiere di oggi</div></div><button class="btn" id="newRound">Azzera</button></div>
   <div class="row"><div class="grow"><b>Aggiorna i dati del campo</b><div class="hint">Riscarica buche e green da OpenStreetMap</div></div><button class="btn" id="reloadCourse">Aggiorna</button></div>
   <p class="hint" id="wxMore" style="margin-top:12px"></p>
+</div></div>
+
+<div class="sheet" id="sGes" hidden><div>
+  <button class="close" data-close>×</button>
+  <h2>Cartellino ufficiale</h2>
+  <p class="sub">Scegli il circolo su GesGolf che corrisponde a questo campo. I dati si aggiornano da soli ogni settimana.</p>
+  <input id="gesQ" placeholder="Cerca il circolo" autocomplete="off">
+  <div id="gesList"></div>
 </div></div>
 
 <div class="sheet" id="sClubs" hidden><div>
@@ -315,10 +329,11 @@ const DEFAULT_CLUBS = [["Driver",200],["Legno 3",180],["Ibrido",165],["Ferro 5",
 const S = {
   course:null, hole:0, me:null, acc:null, sim:false, target:null, mode:null, view:'hole',
   wx:null, elev:{}, clubs:store.get('clubs',DEFAULT_CLUBS), phcp:store.get('phcp',20),
-  round:store.get('round',null), slopes:{}, watch:false, lastShot:null, near:[], scoreHole:0
+  round:store.get('round',null), slopes:{}, watch:false, lastShot:null, near:[], scoreHole:0,
+  index:store.get('index',19.4), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
 };
 if(!S.round || S.round.date!==today()) S.round=null;
-function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}, freeGreens:{}}; store.set('round',S.round); }
+function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}}; store.set('round',S.round); }
 
 /* ============ mappa ============ */
 const map = L.map('map',{zoomControl:false, maxZoom:21}).setView([44.4,8.9],9);
@@ -410,38 +425,103 @@ async function loadCourse(el, force=false){
   buildCourse(data);
 }
 function buildCourse(data){
-  const greens=[], hazards=[], holes=[];
+  const greens=[], hazards=[], osmHoles=[];
   for(const e of data.els){
     const g=e.g, geo=e.geo;
     if(g==='green') greens.push(geo);
     else if(g==='bunker') hazards.push({type:'sand',poly:geo});
     else if(g==='water_hazard'||g==='lateral_water_hazard'||e.w) hazards.push({type:'water',poly:geo});
     else if(g==='hole' && e.k==='way'){
-      const ref=parseInt(e.ref,10); holes.push({ref:isNaN(ref)?holes.length+1:ref, par:parseInt(e.par,10)||null, line:geo, si:parseInt(e.hcp,10)||null});
+      const ref=parseInt(e.ref,10); osmHoles.push({ref:isNaN(ref)?osmHoles.length+1:ref, par:parseInt(e.par,10)||null, line:geo, si:parseInt(e.hcp,10)||null});
     }
   }
-  holes.sort((a,b)=>a.ref-b.ref);
-  for(const h of holes){
-    const end=h.line[h.line.length-1]; let best=null, bd=Infinity;
+  for(const h of osmHoles){ const end=h.line[h.line.length-1]; let best=null, bd=Infinity;
     for(const g of greens){ const d=minDistPoly(end,g); if(d<bd){bd=d;best=g;} }
-    h.end=end; h.tee=h.line[0];
-    if(bd<60) h.green=best;
-    else { const ax=h.line.length>1?bearing(h.line[h.line.length-2],end):0; // green non disegnato: ovale stimato 28 x 22 m
-      h.green=[]; for(let k=0;k<24;k++){ const a=k*15; const r=1/Math.sqrt((Math.cos(rad(a))/14)**2+(Math.sin(rad(a))/11)**2); h.green.push(offset(end,ax+a,r)); }
-      h.greenEst=true; }
-  }
-  S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, holes, greens, hazards, free:holes.length===0};
+    if(bd<60) h.green=best; }
+  S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, greens, hazards, osmHoles, holes:[]};
+  S.course.ges=findGes(S.course);
+  rebuildHoles();
   S.slopes=store.get('slopes.'+data.id,{});
   store.set('lastCourse', data.id);
   if(!S.round || S.round.course!==data.id) newRound();
-  S.hole=Math.min(store.get('hole.'+data.id,0), Math.max(0,holes.length-1));
-  if(S.me && !S.course.free){ // sei sul campo: parti dalla buca il cui tee è più vicino
-    let bi=-1, bd=80; holes.forEach((h,i)=>{ const d=dist(S.me,h.tee); if(d<bd){bd=d;bi=i;} }); if(bi>=0) S.hole=bi; }
+  const holes=S.course.holes;
+  S.hole=Math.min(store.get('hole.'+data.id,0), holes.length-1);
+  if(S.me){ let bi=-1, bd=80; holes.forEach((h,i)=>{ if(h.tee){ const d=dist(S.me,h.tee); if(d<bd){bd=d;bi=i;} } }); if(bi>=0) S.hole=bi; }
   drawCourse();
-  if(S.course.free){ S.hole=0; toast('Su questo campo le buche non sono mappate: tocca il green di ogni buca la prima volta', 6000); }
   showHole(true);
-  if(S.course.free && !S.round.freeGreens[freeKey()]) setMode('pickGreen');
   fetchWeather();
+  if(!S.gesData) loadGes().then(()=>{ if(S.course&&S.course.id===data.id){ S.course.ges=findGes(S.course); rebuildHoles(); showHole(false); } });
+  else loadGes(); // aggiorna in silenzio
+}
+function ovalAt(c, ax=0, a=14, b=11){ const out=[]; for(let k=0;k<24;k++){ const t=k*15; const r=1/Math.sqrt((Math.cos(rad(t))/a)**2+(Math.sin(rad(t))/b)**2); out.push(offset(c,ax+t,r)); } return out; }
+function rebuildHoles(){
+  const c=S.course, custom=store.get('custom.'+c.id,{}), ges=c.ges;
+  const byRef={}; c.osmHoles.forEach(h=>byRef[h.ref]=h);
+  const N=Math.max(ges?ges.holes.length:0, ...c.osmHoles.map(h=>h.ref), ...Object.keys(custom).map(Number), 0) || 18;
+  const holes=[];
+  for(let ref=1;ref<=N;ref++){
+    const o=byRef[ref], cu=custom[ref]||{}, g=ges&&ges.holes.find(x=>x.n===ref);
+    const slot={ref, par:(g&&g.par)||(o&&o.par)||null, si:(g&&g.hcp)||(o&&o.si)||null, len:g?g.len:null};
+    let line=o?o.line.slice():null, green=cu.green||(o&&o.green)||null;
+    if(cu.tee){ line = line ? [cu.tee, ...line.slice(1)] : null; }
+    let end = green ? centroid(green) : (line ? line[line.length-1] : null);
+    if(!line && cu.tee && end) line=[cu.tee, end];
+    if(!green && end){ green=ovalAt(end, line&&line.length>1?bearing(line[line.length-2],end):0); slot.greenEst=true; }
+    Object.assign(slot,{line, green, end, tee:cu.tee||(line?line[0]:null), missing:!end, custom:!!(cu.tee||cu.green)});
+    holes.push(slot);
+  }
+  c.holes=holes; c.free=holes.every(h=>h.missing);
+  updateGesState();
+}
+
+/* ============ cartellini GesGolf ============ */
+async function loadGes(){
+  try{ const r=await timeoutFetch('data/gesgolf.json?d='+today(),{},15000); if(!r.ok) return;
+    const j=await r.json(); S.gesData=j; store.set('ges',j); }catch(e){}
+}
+const STOP=new Set(['golf','club','country','tennis','e','di','del','della','dei','la','le','il','lo','gc','g','c','ssd','asd','srl','circolo','resort','sporting','spa','associazione','sportiva','dilettantistica','the','and','park','parco','hotel']);
+const normTok=t=>t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\bst\b\.?/g,'sant').replace(/sant'?\s*/g,'sant').split(/[^a-z0-9]+/).filter(w=>w&&!STOP.has(w));
+function gesScore(club, name){ const a=normTok(club.name), bl=normTok(name), b=new Set(bl); if(!a.length) return 0;
+  const hit=a.filter(w=>b.has(w)); if(!hit.length) return 0;
+  const first=Math.min(...hit.map(w=>bl.indexOf(w))); // a parità, vince il nome che compare prima (es. "Rovedine" prima di "Milano")
+  return hit.length/a.length + hit.length*0.01 - first*0.001; }
+function findGes(c){
+  const list=S.gesData&&S.gesData.circoli; if(!list) return null;
+  const forced=store.get('gesmap.'+c.id,null);
+  if(forced===-1) return null;
+  if(forced){ return list.find(x=>x.id===forced)||null; }
+  let best=null, bs=0; list.forEach(x=>{ const sc=gesScore(x,c.name); if(sc>bs){bs=sc;best=x;} });
+  return bs>=0.5 ? best : null;
+}
+function updateGesState(){
+  const g=S.course&&S.course.ges;
+  $('#gesState').textContent = g ? `${g.name} · percorso ${g.course} · par ${g.par}` : (S.gesData?'Nessun circolo collegato: tocca Cambia':'Dati non ancora scaricati');
+}
+function teeInfo(){ const g=S.course&&S.course.ges; if(!g) return null; return g.tees.find(t=>t.name===S.tee)||g.tees[1]||g.tees[0]; }
+function teeIndex(){ const g=S.course&&S.course.ges; if(!g) return -1; const t=teeInfo(); return g.tees.indexOf(t); }
+function playingHcp(){
+  const manual=S.course?store.get('phcpMan.'+S.course.id,null):null; if(manual!=null) return manual;
+  const g=S.course&&S.course.ges, t=teeInfo();
+  const half = (g ? g.holes.length : holesCount()) <= 9; // percorso da 9 buche: metà handicap
+  if(g && t && t.cr && t.sr) return Math.round((half?S.index/2:S.index)*t.sr/113 + (t.cr - g.par));
+  return Math.round(half?S.index/2:S.index);
+}
+function openGes(){
+  const list=(S.gesData&&S.gesData.circoli)||[];
+  const render=q=>{ const box=$('#gesList'); box.innerHTML='';
+    let items=list.map(x=>({x, sc:gesScore(x,S.course?S.course.name:'')})).filter(o=>!q || o.x.name.toLowerCase().includes(q.toLowerCase()));
+    items.sort((a,b)=>b.sc-a.sc || a.x.name.localeCompare(b.x.name));
+    const none=document.createElement('div'); none.className='row'; none.innerHTML='<div class="grow">Nessun cartellino</div><button class="btn">Scegli</button>';
+    none.querySelector('button').onclick=()=>{ store.set('gesmap.'+S.course.id,-1); S.course.ges=null; rebuildHoles(); closeSheets(); showHole(false); };
+    box.appendChild(none);
+    items.slice(0,40).forEach(({x})=>{ const r=document.createElement('div'); r.className='row';
+      r.innerHTML=`<div class="grow"><b>${esc(x.name)}</b><div class="hint">${esc(x.regione)} · ${x.holes.length} buche · par ${x.par}</div></div><button class="btn main">Scegli</button>`;
+      r.querySelector('button').onclick=()=>{ store.set('gesmap.'+S.course.id,x.id); S.course.ges=x; rebuildHoles(); closeSheets(); showHole(false); toast('Cartellino collegato: '+x.name); };
+      box.appendChild(r); }); };
+  if(!list.length){ $('#gesList').innerHTML='<p class="hint">I cartellini non sono ancora stati scaricati. Riprova tra qualche minuto.</p>'; loadGes(); }
+  else render('');
+  $('#gesQ').value=''; $('#gesQ').oninput=()=>render($('#gesQ').value.trim());
+  openSheet('#sGes');
 }
 function drawCourse(){
   layers.course.clearLayers();
@@ -498,15 +578,11 @@ async function startupWithFix(){
 }
 
 /* ============ buca corrente ============ */
-function freeKey(){ return 'f'+S.hole; }
-function curHole(){
-  const c=S.course; if(!c) return null;
-  if(c.free){ const g=S.round.freeGreens[freeKey()]; return {ref:S.hole+1, par:null, si:null, green:g?c.greens[g.i]:null, line:null}; }
-  return c.holes[S.hole]||null;
-}
+function curHole(){ const c=S.course; return c ? c.holes[S.hole]||null : null; }
+function playable(h){ return h && !h.missing; }
 function holeKey(){ const h=curHole(); return String(h ? h.ref : S.hole+1); }
 function greenCenter(h){ return h && h.green ? centroid(h.green) : (h && h.end) || null; }
-function pinPos(){ const h=curHole(); if(!h) return null; const p=S.round.pins[holeKey()]; return p || greenCenter(h); }
+function pinPos(){ const h=curHole(); if(!playable(h)) return null; const p=S.round.pins[holeKey()]; return p || greenCenter(h); }
 function approachPoint(h){ if(h.line&&h.line.length>1) return h.line[h.line.length-2]; return S.me || null; }
 function greenAxis(h){ const c=greenCenter(h), a=approachPoint(h); return a&&c&&dist(a,c)>3 ? bearing(a,c) : 0; }
 function greenExtent(h){ // metri dal centro verso fondo, ingresso, destra, sinistra
@@ -514,17 +590,24 @@ function greenExtent(h){ // metri dal centro verso fondo, ingresso, destra, sini
   const r=b=>{ const hits=lineHits(c, offset(c,b,30), h.green); return hits.length?hits[0]:8; };
   return {back:r(ax), front:r(ax+180), right:r(ax+90), left:r(ax-90), ax};
 }
-function holePar(i){ const c=S.course, h=c&&!c.free&&c.holes[i]; const ref=holeRefAt(i);
+function holePar(i){ const h=S.course&&S.course.holes[i]; const ref=holeRefAt(i);
   return (h&&h.par) || ((S.round&&S.round.scores[ref])||{}).par || 4; }
-function holeRefAt(i){ const c=S.course; return c&&!c.free&&c.holes[i] ? c.holes[i].ref : i+1; }
-function holeSI(i){ const c=S.course, h=c&&!c.free&&c.holes[i]; return (h&&h.si) || ((S.round&&S.round.scores[holeRefAt(i)])||{}).si || null; }
+function holeRefAt(i){ const h=S.course&&S.course.holes[i]; return h ? h.ref : i+1; }
+function holeSI(i){ const h=S.course&&S.course.holes[i]; return (h&&h.si) || ((S.round&&S.round.scores[holeRefAt(i)])||{}).si || null; }
+function holeLen(h){ const k=teeIndex(); return h&&h.len&&k>=0 ? h.len[k] : null; }
 function showHole(fit){
   exitGreenView(false);
   const h=curHole(); layers.hole.clearLayers(); pinMk=null;
   if(!h){ return; }
-  const par=holePar(S.hole), si=holeSI(S.hole);
-  $('#holeNum').textContent='Buca '+h.ref; $('#holePar').textContent='Par '+par+(si?' · HCP '+si:'');
+  const par=holePar(S.hole), si=holeSI(S.hole), len=holeLen(h);
+  $('#holeNum').textContent='Buca '+h.ref; $('#holePar').textContent='Par '+par+(si?' · HCP '+si:'')+(len?' · '+len+' m':'');
   store.set('hole.'+S.course.id, S.hole);
+  if(h.missing){
+    clearTarget(); update();
+    if(fit) map.fitBounds(S.course.bounds,{paddingTopLeft:[20,90],paddingBottomRight:[20,250]});
+    toast('Buca '+h.ref+' non disegnata sulla mappa: tocca il tee e poi il green', 5000);
+    setMode('drawTee'); return;
+  }
   if(h.line) L.polyline(h.line,{color:'#fff',weight:2,opacity:.55,dashArray:'6 8',interactive:false}).addTo(layers.hole);
   if(h.green) L.polygon(h.green,{color:'#ffd23f',weight:2.5,fillOpacity:.15,dashArray:h.greenEst?'6 6':null,interactive:false}).addTo(layers.hole);
   const pp=pinPos();
@@ -567,10 +650,33 @@ function drawHazardLabels(){
 function setPin(p){ S.round.pins[holeKey()]=p; store.set('round',S.round); const gv=S.view==='green'; showHole(false); if(gv) enterGreenView(); toast('Bandiera posizionata'); }
 function changeHole(d){
   const c=S.course; if(!c) return;
-  const n = c.free ? 18 : c.holes.length;
+  if(S.mode==='drawTee'||S.mode==='drawGreen') setMode(null);
+  const n=c.holes.length;
   S.hole=(S.hole+d+n)%n; S.lastShot=null; $('#iShotWrap').hidden=true;
   showHole(true);
-  if(c.free && !S.round.freeGreens[freeKey()]) setMode('pickGreen');
+}
+
+/* ============ disegno buche e "sono sul green" ============ */
+let drawLayer=L.layerGroup().addTo(map);
+function saveCustom(ref, part){ const k='custom.'+S.course.id, all=store.get(k,{}); all[ref]={...(all[ref]||{}), ...part}; store.set(k,all); }
+function startDraw(){ if(!S.course){ toast('Carica prima un campo'); return; } closeSheets(); exitGreenView(false); setMode('drawTee'); }
+function finishDraw(){
+  const d=S.draw, h=curHole(); drawLayer.clearLayers();
+  if(!d||!h){ setMode(null); return; }
+  const part={}; if(d.tee) part.tee=d.tee;
+  if(d.green.length>=3) part.green=d.green;
+  else if(d.green.length){ const c=centroid(d.green); part.green=ovalAt(c, d.tee?bearing(d.tee,c):0); }
+  S.draw=null; setMode(null);
+  if(!part.tee && !part.green){ showHole(false); return; }
+  saveCustom(h.ref, part); rebuildHoles(); showHole(true); toast('Buca '+h.ref+' salvata');
+}
+function iAmOnGreen(){
+  const h=curHole(); if(!h){ toast('Carica prima un campo'); return; }
+  if(!S.me){ toast('Aspetto la posizione GPS'); return; }
+  const poly=S.course.greens.find(g=>inside(S.me,g)||minDistPoly(S.me,g)<3);
+  const ax = h.line&&h.line.length>1 ? bearing(h.line[h.line.length-2], S.me) : 0;
+  saveCustom(h.ref,{green: poly || ovalAt(S.me, ax)}); rebuildHoles(); showHole(false); enterGreenView();
+  toast(poly?'Green della buca '+h.ref+' riconosciuto e salvato':'Posizione del green della buca '+h.ref+' salvata');
 }
 
 /* ============ bandiera rapida ============ */
@@ -751,18 +857,30 @@ map.on('click', e=>{
   const p=[e.latlng.lat,e.latlng.lng];
   if(S.mode==='flag'){ const h=curHole(); if(h&&h.green&&!inside(p,h.green)&&minDistPoly(p,h.green)>8){ toast('Tocca dentro il green'); return; }
     setMode(null); setPin(p); return; }
-  if(S.mode==='pickGreen'){ const c=S.course; const i=c.greens.findIndex(g=>inside(p,g)||minDistPoly(p,g)<6);
-    if(i<0){ toast('Tocca un green (contorno verde)'); return; }
-    S.round.freeGreens[freeKey()]={i}; store.set('round',S.round); setMode(null); showHole(false); toast('Green della buca '+(S.hole+1)+' impostato'); return; }
+  if(S.mode==='drawTee'){ S.draw={tee:p, green:[]}; drawLayer.clearLayers();
+    L.circleMarker(p,{radius:8,color:'#fff',fillColor:'#2f8cff',fillOpacity:1}).addTo(drawLayer); setMode('drawGreen'); return; }
+  if(S.mode==='drawGreen'){ if(!S.draw) S.draw={tee:null,green:[]};
+    const poly=!S.draw.green.length && S.course.greens.find(g=>inside(p,g));
+    if(poly){ S.draw.green=poly; finishDraw(); return; }   // green già disegnato su OpenStreetMap: basta un tocco
+    S.draw.green.push(p); L.circleMarker(p,{radius:5,color:'#ffd23f',fillColor:'#ffd23f',fillOpacity:1}).addTo(drawLayer);
+    if(S.draw.green.length>=3){ drawLayer.eachLayer(l=>{ if(l instanceof L.Polygon) drawLayer.removeLayer(l); }); L.polygon(S.draw.green,{color:'#ffd23f',weight:2}).addTo(drawLayer); }
+    return; }
   if(S.sim){ setMe(p, 3); return; }
+  if(!playable(curHole())) return;
   S.target=p; update();
 });
 function setMode(m){
   S.mode=m;
-  const txt={flag:'Tocca il green dove vedi la bandiera', pickGreen:'Tocca il green della buca '+(S.hole+1)}[m];
+  const ref=curHole()?curHole().ref:'';
+  const txt={flag:'Tocca il green dove vedi la bandiera',
+    drawTee:`Buca ${ref}: tocca il tee sulla foto`,
+    drawGreen:`Buca ${ref}: tocca il green. Se non è disegnato tocca 3 o più punti sul bordo, poi Fine`}[m];
   $('#mode').hidden=!m; if(m) $('#modeText').textContent=txt;
+  $('#modeSkip').hidden = m!=='drawTee';
+  if(!m){ drawLayer.clearLayers(); }
 }
-$('#modeEnd').onclick=()=>setMode(null);
+$('#modeEnd').onclick=()=>{ if(S.mode==='drawGreen') finishDraw(); else { S.draw=null; setMode(null); } };
+$('#modeSkip').onclick=()=>{ S.draw={tee:null,green:[]}; setMode('drawGreen'); };
 
 /* ============ GPS ============ */
 function setMe(p, acc){
@@ -787,7 +905,7 @@ function noFix(){ if(S.course) return;
   if(d) buildCourse(d); else openSheet('#sCourse'); }
 function autoHole(){
   const c=S.course; if(!c||c.free||!S.me) return;
-  const nx=c.holes[S.hole+1], cur=c.holes[S.hole]; if(!nx||!cur) return;
+  const nx=c.holes[S.hole+1], cur=c.holes[S.hole]; if(!nx||!cur||!nx.tee||!cur.tee) return;
   if(dist(S.me,nx.tee)<25 && dist(S.me,cur.tee)>60){ S.hole++; S.lastShot=null; $('#iShotWrap').hidden=true; showHole(true); toast('Buca '+nx.ref); }
 }
 
@@ -829,14 +947,21 @@ function openHaz(){
 }
 
 /* ============ segnapunti e Stableford ============ */
-function holesCount(){ return S.course ? (S.course.free?18:S.course.holes.length) : 18; }
-function received(si){ if(!si) return 0; const ph=Math.max(0,S.phcp|0); return Math.floor(ph/18)+(si<=ph%18?1:0); }
+function holesCount(){ return S.course ? S.course.holes.length : 18; }
+function received(si){ if(!si) return 0; const ph=Math.max(0,playingHcp()); const n=holesCount()<=9?9:18;
+  return Math.floor(ph/n)+(((si-1)%n)+1<=ph%n?1:0); }
 function points(i){ const sc=S.round.scores[holeRefAt(i)]; if(!sc||!sc.s) return null;
   const si=holeSI(i); return Math.max(0, 2+holePar(i)+received(si)-sc.s); }
 function renderScore(){
-  $('#phcp').value=S.phcp;
+  $('#phcp').value=playingHcp(); $('#hindex').value=S.index;
+  const g=S.course&&S.course.ges, ti=teeInfo(), man=store.get('phcpMan.'+S.course.id,null);
+  $('#phcpHint').textContent = man!=null ? 'Inserito a mano (svuota per ricalcolare)' : (g&&ti&&ti.cr ? `Calcolato: tee ${ti.name.toLowerCase()}, CR ${String(ti.cr).replace('.',',')}, SR ${ti.sr}` : 'Senza cartellino: uguale al tuo handicap');
+  const tr=$('#teeRow'); tr.innerHTML='';
+  if(g){ tr.innerHTML='<div class="lab" style="margin:8px 0 4px;font-weight:600">Partenza</div><div class="chips"></div>';
+    g.tees.forEach(x=>{ const b=document.createElement('button'); b.className='chip'+(ti===x?' on':''); b.textContent=x.name.charAt(0)+x.name.slice(1).toLowerCase();
+      b.onclick=()=>{ S.tee=x.name; store.set('tee',S.tee); renderScore(); showHole(false); }; tr.querySelector('.chips').appendChild(b); }); }
   const i=S.scoreHole, ref=holeRefAt(i), sc=S.round.scores[ref]||(S.round.scores[ref]={}), par=holePar(i), si=holeSI(i);
-  const osmPar=S.course&&!S.course.free&&S.course.holes[i]&&S.course.holes[i].par, osmSI=S.course&&!S.course.free&&S.course.holes[i]&&S.course.holes[i].si;
+  const osmPar=S.course&&S.course.holes[i]&&S.course.holes[i].par, osmSI=S.course&&S.course.holes[i]&&S.course.holes[i].si;
   const step=(k,lab,v,extra='')=>`<div class="stepbig"><span class="lab">${lab}${extra}</span><span class="ctl"><button data-k="${k}" data-d="-1">−</button><span class="num">${v}</span><button data-k="${k}" data-d="1">+</button></span></div>`;
   const pts=points(i), rc=received(si);
   let html=`<b>Buca ${ref}</b> · Par ${par}${si?' · HCP '+si:''}${si&&rc?` · ricevi ${rc} colp${rc>1?'i':'o'}`:''}`;
@@ -864,7 +989,8 @@ function renderScore(){
   const t=$('#scoreTbl'); t.innerHTML=rows;
   t.querySelectorAll('tr[data-i]').forEach(tr=>tr.onclick=()=>{ S.scoreHole=+tr.dataset.i; renderScore(); });
 }
-$('#phcp').addEventListener('change',()=>{ S.phcp=parseInt($('#phcp').value,10)||0; store.set('phcp',S.phcp); renderScore(); showHole(false); });
+$('#phcp').addEventListener('change',()=>{ const v=$('#phcp').value.trim(); store.set('phcpMan.'+S.course.id, v===''?null:(parseInt(v,10)||0)); renderScore(); });
+$('#hindex').addEventListener('change',()=>{ S.index=parseFloat($('#hindex').value.replace(',','.'))||0; store.set('index',S.index); renderScore(); });
 
 /* ============ bastoni ============ */
 function openClubs(){ const box=$('#clubList'); box.innerHTML='';
@@ -929,6 +1055,10 @@ $('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; 
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
 $('#tMore').onclick=()=>openSheet('#sMore');
 $('#openHaz').onclick=openHaz;
+$('#gesBtn').onclick=()=>{ if(!S.course){ toast('Carica prima un campo'); return; } openGes(); };
+$('#drawBtn').onclick=startDraw;
+$('#hereBtn').onclick=()=>{ closeSheets(); iAmOnGreen(); };
+$('#gHere').onclick=iAmOnGreen;
 $('#openClubs').onclick=openClubs;
 $('#watchBtn').onclick=toggleWatch;
 $('#dlBtn').onclick=downloadTiles;
