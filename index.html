@@ -1541,6 +1541,7 @@ function hvTransform(g, W, H, padTop, padBot){
   const pts=g.pl.concat(g.h.green.map(P20)); g.fairs.forEach(f=>f.forEach(p=>pts.push(P20(p))));
   if(S.me && distToPolyline(S.me,g.line)<120) pts.push(P20(S.me));
   if(S.target) pts.push(P20(S.target));
+  ((S.round&&S.round.shots&&S.round.shots[String(g.h.ref)])||[]).forEach(p=>{ if(distToPolyline(p,g.line)<150) pts.push(P20(p)); });
   const ca=Math.cos(-g.ang), sa=Math.sin(-g.ang), r=p=>[p[0]*ca-p[1]*sa, p[0]*sa+p[1]*ca];
   let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18; pts.map(r).forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
   const m=45/g.mpp; x0-=m; x1+=m; y0-=m*.8; y1+=m*.8;
@@ -1606,6 +1607,8 @@ function hvRender(ctx, W, H, opt={}){
   const scr=ll=>{ const q=P20(ll), p=M.transformPoint(new DOMPoint(q[0],q[1])); return [p.x,p.y]; };
   const pp=pinPos(), pts=[];
   const meOk=S.me && dist(S.me,pp)<1500;
+  // colpi già giocati su questa buca (pulsante "Colpo"), poi io, il punto toccato e la bandiera
+  ((S.round&&S.round.shots&&S.round.shots[String(g.h.ref)])||[]).forEach(p=>{ if(!meOk||dist(p,S.me)>3) pts.push({ll:p, shot:true}); });
   if(meOk) pts.push({ll:S.me, me:true});
   if(S.target) pts.push({ll:S.target, tgt:true});
   pts.push({ll:pp, pin:true});
@@ -1623,7 +1626,7 @@ function hvRender(ctx, W, H, opt={}){
     if(p.pin){ ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2.5;
       ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y-30); ctx.stroke(); ctx.fillStyle=HVC.mark; ctx.beginPath(); ctx.moveTo(x+1,y-30); ctx.lineTo(x+18,y-24); ctx.lineTo(x+1,y-18); ctx.fill(); return; }
     ctx.fillStyle=HVC.mark; ctx.beginPath(); ctx.arc(x,y,R,0,7); ctx.fill();
-    if(p.me){ ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke(); }
+    if(p.me){ ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke(); } if(p.shot){ ctx.globalAlpha=1; }
     ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font=`800 ${opt.small?15:17}px system-ui,sans-serif`; ctx.fillText(String(i+1),x,y+1); ctx.textAlign='left'; });
   // numero della buca
   if(!opt.small){ ctx.fillStyle='#fff'; ctx.textAlign='right'; ctx.textBaseline='alphabetic'; ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=6;
@@ -1669,7 +1672,8 @@ $('#prevHole').onclick=()=>changeHole(-1);
 $('#nextHole').onclick=()=>changeHole(1);
 $('#tFlag').onclick=openFlag;
 $('#tGreen').onclick=()=>{ if(S.view==='green') exitGreenView(true); else enterGreenView(); };
-$('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; } S.lastShot=S.me.slice(); $('#iShotWrap').hidden=false; update(); toast('Colpo segnato: cammina fino alla palla'); };
+$('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; } S.lastShot=S.me.slice();
+  if(S.round){ S.round.shots=S.round.shots||{}; (S.round.shots[holeKey()]=S.round.shots[holeKey()]||[]).push(S.me.slice()); store.set('round',S.round); } $('#iShotWrap').hidden=false; update(); toast('Colpo segnato: cammina fino alla palla'); };
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
 $('#tMore').onclick=()=>{ showDlState(); openSheet('#sMore'); };
 $('#openHaz').onclick=openHaz;
