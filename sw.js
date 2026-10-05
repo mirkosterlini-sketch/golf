@@ -3,7 +3,7 @@
 // Foto dei campi: prima la copia salvata (scaricata con "Scarica la mappa del campo" o vista in precedenza).
 const TILES = 'caddie-tiles-v2';
 const APP = 'caddie-app-v1';
-const TILE_HOSTS = /arcgisonline\.com|geoservizi\.regione\.liguria\.it|cartografia\.servizirl\.it/;
+const TILE_HOSTS = /arcgisonline\.com|geoservizi\.regione\.liguria\.it|cartografia\.servizirl\.it|golfetennisrapallo\.it\/download\//;
 const APP_HOSTS = /cdnjs\.cloudflare\.com|fonts\.googleapis\.com|fonts\.gstatic\.com/;
 
 self.addEventListener('install', () => self.skipWaiting());

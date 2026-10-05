@@ -81,6 +81,15 @@ body.race #plays, body.race #iElevW, body.race #gSlope, body.race #gMeasure{disp
 .sheet h2{margin:0 0 4px;font-size:20px}
 .sheet h3{margin:16px 0 6px;font-size:15px;color:var(--muted);font-weight:600}
 .sheet p.sub{margin:0 0 12px;color:var(--muted);font-size:14px;line-height:1.4}
+#cImgBox{overflow:auto;border-radius:10px;background:#000;-webkit-overflow-scrolling:touch;max-height:62vh}
+#cImg{display:block;width:100%;height:auto}
+#cImgBox.zoom #cImg{width:260%;max-width:none}
+#cLens{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#cLens span{padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.08);font-size:13px}
+#cLens span.me{background:#ffd23f;color:#111;font-weight:700}
+#cText{line-height:1.5;font-size:15px;margin:6px 0 12px}
+.b2{display:flex;gap:10px}.b2 .btn{flex:1}
+#gNote{margin-top:6px;font-size:13px;line-height:1.35;color:#ffe9a8}
 .sheet .close{float:right;font-size:26px;line-height:1;padding:0 4px;color:var(--muted)}
 .row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .row .grow{flex:1;min-width:0}
@@ -147,7 +156,7 @@ table.score tr{cursor:pointer}
     <div id="holeLine"><span id="holeNum" class="num">—</span><span id="holePar" class="num"></span><span id="raceTag" hidden>GARA</span></div>
   </div>
   <button class="iconbtn" id="nextHole" aria-label="Buca successiva">›</button>
-  <button class="iconbtn" id="btnStyle" aria-label="Cambia vista: satellite o disegno" style="font-size:12px;font-weight:700;line-height:1.1">Dise-<br>gno</button>
+  <button class="iconbtn" id="btnCard" aria-label="Scheda della buca dal sito del circolo" style="font-size:11px;font-weight:700;line-height:1.1" hidden>Sche-<br>da</button>
   <button class="iconbtn" id="btnCourse" aria-label="Scegli campo">⛳</button>
 </header>
 
@@ -155,6 +164,7 @@ table.score tr{cursor:pointer}
 <div id="gcard" hidden>
   <div class="t" id="gTitle"></div>
   <div class="s" id="gSub"></div>
+  <div id="gNote" hidden></div>
   <div class="b"><button id="gSlope">Pendenza</button><button id="gMeasure">Livella</button><button id="gFlag">Bandiera</button><button id="gHere">Sono sul green</button><button class="main" id="gBack">Torna alla buca</button></div>
 </div>
 <div id="toast" hidden></div>
@@ -250,6 +260,7 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Sono sul green</b><div class="hint">Salva la posizione esatta del green di questa buca</div></div><button class="btn" id="hereBtn">Salva</button></div>
   <div class="row"><div class="grow"><b>Ostacoli di questa buca</b><div class="hint">Bunker e acqua: quanto manca e quanto per superarli</div></div><button class="btn" id="openHaz">Apri</button></div>
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
+  <div class="row"><div class="grow"><b>Vista della mappa</b><div class="hint" id="styleState">Foto</div></div><button class="btn" id="btnStyle">Cambia</button></div>
   <div class="row"><div class="grow"><b>Foto aerea</b><div class="hint" id="imgState">Satellite</div></div><button class="btn" id="imgBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Scarica la mappa del campo</b><div class="hint" id="dlState">Così funziona anche dove non c'è segnale</div></div><button class="btn" id="dlBtn">Scarica</button></div>
   <div class="row"><div class="grow"><b>Passa i dati a un altro dispositivo</b><div class="hint">Buche disegnate, pendenze, bastoni e impostazioni, dal PC al telefono o viceversa</div></div><button class="btn" id="syncBtn">Apri</button></div>
@@ -260,6 +271,18 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Nuovo giro</b><div class="hint">Azzera segnapunti e bandiere di oggi</div></div><button class="btn" id="newRound">Azzera</button></div>
   <div class="row"><div class="grow"><b>Aggiorna i dati del campo</b><div class="hint">Riscarica buche e green da OpenStreetMap</div></div><button class="btn" id="reloadCourse">Aggiorna</button></div>
   <p class="hint" id="wxMore" style="margin-top:12px"></p>
+</div></div>
+
+<div class="sheet" id="sCard" hidden><div>
+  <button class="close" data-close>×</button>
+  <h2 id="cTitle">Scheda buca</h2>
+  <p class="sub" id="cSub"></p>
+  <div id="cImgBox"><img id="cImg" alt="Disegno della buca dal sito del circolo"></div>
+  <p class="hint" id="cImgHint">Tocca il disegno per ingrandirlo, poi scorri col dito</p>
+  <div id="cLens"></div>
+  <p id="cText"></p>
+  <div class="b2"><button class="btn" id="cPrev">‹ Buca prima</button><button class="btn" id="cNext">Buca dopo ›</button></div>
+  <p class="hint" id="cSrc"></p>
 </div></div>
 
 <div class="sheet" id="sGes" hidden><div>
@@ -518,7 +541,9 @@ function buildCourse(data){
   S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, greens, hazards, osmHoles, fairways, tees, holes:[]};
   regionOf(data).then(rg=>{ if(S.course&&S.course.id===data.id){ S.course.region=rg; setImagery(rg); } });
   S.course.ges=findGes(S.course);
+  S.course.card=findCard(S.course);
   rebuildHoles();
+  updateCardBtn();
   S.slopes=store.get('slopes.'+data.id,{});
   store.set('lastCourse', data.id);
   if(!S.round || S.round.course!==data.id) newRound();
@@ -528,8 +553,9 @@ function buildCourse(data){
   drawCourse();
   showHole(true);
   fetchWeather();
-  if(!S.gesData) loadGes().then(()=>{ if(S.course&&S.course.id===data.id){ S.course.ges=findGes(S.course); rebuildHoles(); showHole(false); } });
+  if(!S.gesData) loadGes().then(()=>{ if(S.course&&S.course.id===data.id){ S.course.ges=findGes(S.course); S.course.card=findCard(S.course); rebuildHoles(); showHole(false); } });
   else loadGes(); // aggiorna in silenzio
+  loadCards().then(()=>{ if(S.course&&S.course.id===data.id){ S.course.card=findCard(S.course); updateCardBtn(); } });
 }
 function ovalAt(c, ax=0, a=14, b=11){ const out=[]; for(let k=0;k<24;k++){ const t=k*15; const r=1/Math.sqrt((Math.cos(rad(t))/a)**2+(Math.sin(rad(t))/b)**2); out.push(offset(c,ax+t,r)); } return out; }
 function rebuildHoles(){
@@ -553,6 +579,48 @@ function rebuildHoles(){
 }
 
 /* ============ cartellini GesGolf ============ */
+/* ============ schede buca dai siti dei circoli ============ */
+async function loadCards(){
+  if(!S.cards) S.cards=store.get('cards',null);
+  try{ const r=await timeoutFetch('data/schede.json?d='+today(),{},15000); if(!r.ok) return;
+    const j=await r.json(); S.cards=j; store.set('cards',j); }catch(e){}
+}
+function findCard(c){
+  if(!S.cards) S.cards=store.get('cards',null);
+  const list=S.cards&&S.cards.circoli; if(!list||!c) return null;
+  if(c.ges){ const byGes=list.find(x=>x.ges===c.ges.id); if(byGes) return byGes; }
+  let best=null, bs=0; list.forEach(x=>{ const sc=gesScore({name:x.nome},c.name); if(sc>bs){bs=sc;best=x;} });
+  return bs>=0.5 ? best : null;
+}
+function cardHole(n){ const c=S.course&&S.course.card; if(!c) return null; return c.buche.find(b=>b.n===n)||null; }
+function cardImg(n){ const c=S.course.card; return c.img.replace('{n}',n); }
+function holeNo(){ const h=curHole(); return h ? (parseInt(h.ref,10)||S.hole+1) : S.hole+1; }
+// le frasi della descrizione che parlano del green (pendenze, livelli, dimensioni)
+function greenNote(text){ if(!text) return '';
+  return text.split(/(?<=[.!?])\s+/).filter(f=>/green/i.test(f)).join(' '); }
+function updateCardBtn(){ $('#btnCard').hidden=!(S.course&&S.course.card); }
+let cardN=1;
+function openCard(n){
+  const c=S.course&&S.course.card; if(!c){ toast('Per questo campo non ho la scheda del circolo'); return; }
+  cardN=n||holeNo(); const b=cardHole(cardN);
+  $('#cTitle').textContent='Buca '+cardN+(b?' · Par '+b.par+' · HCP '+b.hcp:'');
+  $('#cSub').textContent=c.nome;
+  $('#cImgBox').classList.remove('zoom');
+  $('#cImg').src=cardImg(cardN);
+  const g=S.course.ges, tees=g&&g.tees&&b&&g.tees.length===b.len.length ? g.tees.map(t=>t.name) : null;
+  $('#cLens').innerHTML=b ? b.len.map((l,i)=>`<span class="${tees&&tees[i]===S.tee?'me':''}">${tees?esc(tees[i].toLowerCase())+' ':''}${l} m</span>`).join('') : '';
+  $('#cText').textContent=b ? b.text : 'Descrizione non disponibile per questa buca.';
+  $('#cSrc').innerHTML='Dal sito del circolo: <a href="'+esc(c.fonte)+'" target="_blank" rel="noopener" style="color:inherit">apri la pagina</a>';
+  $('#cPrev').disabled=cardN<=1; $('#cNext').disabled=cardN>=c.buche.length;
+  if($('#sCard').hidden) openSheet('#sCard');
+}
+$('#btnCard').onclick=()=>openCard();
+$('#cImgBox').onclick=()=>$('#cImgBox').classList.toggle('zoom');
+$('#cImg').onerror=()=>{ $('#cImgHint').textContent='Disegno non disponibile adesso (serve la rete la prima volta)'; };
+$('#cImg').onload=()=>{ $('#cImgHint').textContent='Tocca il disegno per ingrandirlo, poi scorri col dito'; };
+$('#cPrev').onclick=()=>openCard(cardN-1);
+$('#cNext').onclick=()=>openCard(cardN+1);
+
 async function loadGes(){
   try{ const r=await timeoutFetch('data/gesgolf.json?d='+today(),{},15000); if(!r.ok) return;
     const j=await r.json(); S.gesData=j; store.set('ges',j); }catch(e){}
@@ -625,7 +693,7 @@ function applyStyle(){
   $('#map').classList.toggle('drawn',drawn);
   if(drawn){ map.removeLayer(ESRI); if(regLayer) map.removeLayer(regLayer); map.setMaxZoom(21); }
   else { if(!map.hasLayer(ESRI)) ESRI.addTo(map); if(regLayer){ regLayer.addTo(map); map.setMaxZoom(21); } else map.setMaxZoom(20); }
-  $('#btnStyle').innerHTML = drawn ? 'Foto' : 'Dise-<br>gno';
+  $('#styleState').textContent = drawn ? 'Disegno: solo le linee di green e ostacoli' : 'Foto';
   drawCourse(); if(S.course) showHole(false);
 }
 
@@ -850,6 +918,8 @@ function enterGreenView(){
   if(S.round.pins[holeKey()]){ const into=Math.round(ext.front + (proj(c).to(pp)[0]*Math.sin(rad(ext.ax))+proj(c).to(pp)[1]*Math.cos(rad(ext.ax))));
     s=`Bandiera a ${into} m dall'ingresso · `+s; }
   $('#gSub').textContent=s;
+  const note=greenNote((cardHole(holeNo())||{}).text);
+  $('#gNote').textContent=note?'Dal circolo: '+note:''; $('#gNote').hidden=!note;
   $('#gcard').hidden=false;
 }
 function exitGreenView(refit=true){
@@ -1265,7 +1335,8 @@ async function downloadTiles(){
   urls=[...new Set(urls)];
   if(urls.length>8000){ toast('Il campo è troppo grande da scaricare tutto'); return; }
   // salva anche l'app e i cartellini, così si apre senza rete
-  ['./', 'data/gesgolf.json', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'].forEach(u=>fetch(u).catch(()=>{}));
+  if(S.course.card) S.course.card.buche.forEach(b=>urls.push(cardImg(b.n)));
+  ['./', 'data/gesgolf.json', 'data/schede.json', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'].forEach(u=>fetch(u).catch(()=>{}));
   let done=0, fail=0; $('#dlBtn').disabled=true;
   const work=urls.slice(), run=async()=>{ while(work.length){ const u=work.pop();
     try{ await fetch(u,{mode:'no-cors'}); }catch(e){ fail++; }
@@ -1321,7 +1392,7 @@ $('#impFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; impo
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=5',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=6',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
 async function toggleWatch(){
   if(S.watch){ S.watch=false; $('#watchBtn').textContent='Attiva'; $('#watchState').textContent='Spento';
     if(swReg){ (await swReg.getNotifications({tag:'golf'})).forEach(n=>n.close()); } releaseWake(); return; }
@@ -1360,7 +1431,7 @@ $('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; 
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
 $('#tMore').onclick=()=>{ showDlState(); openSheet('#sMore'); };
 $('#openHaz').onclick=openHaz;
-$('#btnStyle').onclick=()=>{ S.style=S.style==='map'?'sat':'map'; store.set('style',S.style); applyStyle(); toast(S.style==='map'?'Vista disegno':'Vista satellite'); };
+$('#btnStyle').onclick=()=>{ S.style=S.style==='map'?'sat':'map'; store.set('style',S.style); applyStyle(); toast(S.style==='map'?'Vista disegno':'Vista foto'); };
 function applyRace(){
   document.body.classList.toggle('race',S.race); $('#raceTag').hidden=!S.race;
   $('#raceBtn').textContent=S.race?'Spegni':'Attiva'; $('#raceBtn').classList.toggle('main',S.race);
