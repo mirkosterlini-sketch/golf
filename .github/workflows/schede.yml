@@ -31,7 +31,9 @@ jobs:
         id: leggi
         env:
           ISSUE_TITLE: ${{ github.event.issue.title || inputs.url }}
-          ISSUE_BODY: ${{ github.event.issue.body || format('campo: {0}\nosm: {1}', inputs.campo, inputs.osm) }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          INPUT_CAMPO: ${{ inputs.campo }}
+          INPUT_OSM: ${{ inputs.osm }}
         run: |
           node scripts/schede-da-link.mjs | tee out.txt
           grep '^RISULTATO:' out.txt | sed 's/^RISULTATO: //' > risposta.txt || echo "Qualcosa è andato storto: guarda i dettagli dell'azione." > risposta.txt

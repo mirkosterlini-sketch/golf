@@ -5,7 +5,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { readClub } from './schede-auto.mjs';
 
 const title = process.env.ISSUE_TITLE || process.argv[2] || '';
-const body = (process.env.ISSUE_BODY || process.argv.slice(3).join('\n')).replace(/\\n/g, '\n');
+const body = (process.env.ISSUE_BODY || process.argv.slice(3).join('\n')).replace(/\\n/g, '\n')
+  + (process.env.INPUT_CAMPO ? '\ncampo: ' + process.env.INPUT_CAMPO : '') + (process.env.INPUT_OSM ? '\nosm: ' + process.env.INPUT_OSM : '');
 const url = ((title + ' ' + body).match(/https?:\/\/[^\s<>"']+/) || [])[0];
 if (!url) { console.log('RISULTATO: Non ho trovato nessun link da leggere.'); process.exit(0); }
 const osm = (body.match(/osm:[ \t]*(\S+)/i) || [])[1] || null;
