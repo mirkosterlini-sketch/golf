@@ -621,7 +621,7 @@ function cardImg(n){ const c=S.course.card, b=cardHole(n); return (b&&b.img) || 
 function holeNo(){ const h=curHole(); return h ? (parseInt(h.ref,10)||S.hole+1) : S.hole+1; }
 // par, HCP e metri: dalla scheda del circolo, se mancano dal cartellino GesGolf (solo per il percorso che corrisponde)
 function cardData(n){ const c=S.course.card, b=cardHole(n)||{}, g=c.ges&&S.course.ges&&S.course.ges.id===c.ges ? S.course.ges : null, gh=g&&g.holes.find(h=>h.n===n);
-  return { par:b.par||(gh&&gh.par), hcp:b.hcp||(gh&&gh.hcp), len:b.len||(gh&&gh.len)||[],
+  return { par:(gh&&gh.par)||b.par, hcp:(gh&&gh.hcp)||b.hcp, len:b.len||(gh&&gh.len)||[],
     tees:c.teeNomi || (g&&g.tees.map(t=>t.name.toLowerCase())) }; }
 // le frasi della descrizione che parlano del green (pendenze, livelli, dimensioni)
 function greenNote(b){ if(!b) return '';

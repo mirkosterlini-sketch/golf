@@ -2,7 +2,7 @@
 // Funziona sia nel browser che in Node: riceve l'HTML di una pagina e restituisce le buche trovate
 // (numero, par, HCP, foto, descrizione, video). Usato dalla GitHub Action "Aggiungi schede da un link".
 
-const ENT = { '&nbsp;': ' ', '&amp;': '&', '&quot;': '"', '&#39;': "'", '&#039;': "'", '&rsquo;': '’', '&lsquo;': '‘', '&egrave;': 'è', '&eacute;': 'é', '&agrave;': 'à', '&ograve;': 'ò', '&ugrave;': 'ù', '&igrave;': 'ì', '&Egrave;': 'È', '&ldquo;': '“', '&rdquo;': '”', '&hellip;': '…', '&ndash;': '–', '&mdash;': '—', '&deg;': '°' };
+const ENT = { '&nbsp;': ' ', '&amp;': '&', '&quot;': '"', '&#39;': "'", '&#039;': "'", '&rsquo;': '’', '&lsquo;': '‘', '&egrave;': 'è', '&eacute;': 'é', '&agrave;': 'à', '&ograve;': 'ò', '&ugrave;': 'ù', '&igrave;': 'ì', '&Egrave;': 'È', '&ldquo;': '“', '&rdquo;': '”', '&hellip;': '…', '&ndash;': '–', '&mdash;': '—', '&deg;': '°', '&times;': ' ', '&raquo;': '»', '&laquo;': '«', '&ocirc;': 'ô' };
 export const decode = s => s.replace(/&[a-zA-Z]+;|&#\d+;|&#x[0-9a-f]+;/gi, e => ENT[e] ?? (e[1] === '#' ? String.fromCodePoint(e[2] === 'x' || e[2] === 'X' ? parseInt(e.slice(3, -1), 16) : parseInt(e.slice(2, -1), 10)) : e));
 const abs = (u, base) => { try { return new URL(decode(u.trim()), base).href; } catch (e) { return null; } };
 const JUNK = /logo|icon|favicon|sponsor|partner|banner|avatar|placeholder|spinner|flag|social|facebook|instagram|youtube\.png|whatsapp|cookie|data:image|pixel|\.svg/i;
@@ -22,7 +22,7 @@ const stripSize = u => u.replace(/-\d{2,4}x\d{2,4}(?=\.(jpe?g|png|webp)$)/i, '')
 
 // HTML -> testo a righe, con segnaposto per immagini e video al posto giusto
 export function toLines(html, base) {
-  let h = html.replace(/<(script|style|noscript|svg|nav|footer|header|form|select)\b[\s\S]*?<\/\1>/gi, ' ');
+  let h = html.replace(/<head\b[\s\S]*?<\/head>/i, ' ').replace(/<(script|style|noscript|svg|nav|footer|header|form|select|button)\b[\s\S]*?<\/\1>/gi, ' ');
   h = h.replace(/<img\b[^>]*>/gi, t => { const u = imgUrl(t); const alt = (t.match(/\salt\s*=\s*["']([^"']*)["']/i) || [])[1] || ''; return u && !JUNK.test(u) ? `\n[[IMG ${abs(u, base)} ${alt.replace(/\s+/g, '_')}]]\n` : ' '; });
   h = h.replace(/background(?:-image)?\s*:\s*url\(\s*['"]?([^'")]+)['"]?\s*\)/gi, (m, u) => JUNK.test(u) ? m : `>\n[[IMG ${abs(u, base)} ]]\n<x `);
   h = h.replace(/<iframe\b[^>]*src\s*=\s*["']([^"']+)["'][^>]*>/gi, (m, u) => /youtu|vimeo/.test(u) ? `\n[[VID ${abs(u, base)}]]\n` : ' ');
@@ -65,7 +65,9 @@ export function extractHoles(html, base) {
     const lens = [...t.matchAll(/(\d{2,3})\s*(?:mt|m|metri)\b/gi)].map(m => +m[1]).filter(v => v >= 50 && v <= 650);
     // pulizia: niente menu, cookie, pulsanti
     t = t.replace(/\b(Overwiev|Overview|Video|Immagini|Consigli|DETTAGLI|Dettagli|GUARDA IL VIDEO SU YOUTUBE|TORNA ALLA PAGINA PERCORSO|Torna al menu|Leggi di più|Scopri di più|Sponsored by)\b/gi, ' ')
-      .replace(/(Questo sito|Questo sito web|Utilizziamo i cookie|cookie policy|Privacy policy)[\s\S]*$/i, '').replace(/\s+/g, ' ').trim();
+      .replace(/(Questo sito|Questo sito web|Utilizziamo i cookie|cookie policy|Privacy policy)[\s\S]*$/i, '')
+      .replace(/\b(Salta al contenuto|Vai al contenuto|Skip to content|View Larger Image|Previous|Next|Precedente|Successiva|Tutte le buche|Sponsor Available for sponsorship|Available for sponsorship|Facebook|Instagram|Twitter|LinkedIn|Condividi|Share)\b/gi, ' ')
+      .replace(/(?:\b\d{1,2}\s+){6,}\d{1,2}\b/g, ' ').replace(/[☰×]/g, ' ').replace(/^[\s—–\-|:.,]+/, '').replace(/\s+/g, ' ').trim();
     const named = h.imgs.find(i => i.byName), img = (named || h.imgs[0] || {}).u;
     const b = { n: h.n };
     if (par) b.par = +par; if (hcp && +hcp <= 18) b.hcp = +hcp;
@@ -96,6 +98,7 @@ export function courseLinks(html, base) {
     let score = 0;
     if (/(buca|hole)[-_ ]?\d{1,2}\b/.test(s)) score = 3;
     else if (/percors|course|buche|holes|il campo|campo da golf|layout|scorecard/.test(s)) score = 2;
+    else if (/\/(il-)?golf\/?$|\/club\/?$|\/sport\/?$/.test(h.pathname)) score = 1;
     if (score) out.set(h.href, Math.max(score, out.get(h.href) || 0));
   }
   return [...out.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]);
@@ -106,7 +109,9 @@ export async function readClub(startUrl, fetchText, log = () => {}) {
   const seen = new Set(), pages = [];
   const visit = async u => { if (seen.has(u) || seen.size >= 30) return null; seen.add(u);
     try { const html = await fetchText(u); pages.push({ u, html }); return html; } catch (e) { log('errore ' + u + ' ' + e.message); return null; } };
-  const first = await visit(startUrl); if (!first) throw new Error('Non riesco ad aprire il link');
+  let first = await visit(startUrl);
+  if (!first) { const alt = startUrl.includes('://www.') ? startUrl.replace('://www.', '://') : startUrl.replace('://', '://www.'); first = await visit(alt); if (first) startUrl = alt; }
+  if (!first) throw new Error('Non riesco ad aprire il link');
   const title = decode((first.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '').replace(/\s+/g, ' ').trim();
   let links = courseLinks(first, startUrl);
   // se la pagina data ha già il percorso (almeno 9 buche) non vado su altre pagine: potrebbero essere un altro percorso
@@ -114,6 +119,14 @@ export async function readClub(startUrl, fetchText, log = () => {}) {
   const second = enough ? [] : links.filter(l => !/(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 6);
   for (const l of second) { const h = await visit(l); if (h) links = links.concat(courseLinks(h, l)); }
   if (!enough) for (const l of [...new Set(links)].filter(l => /(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 27)) await visit(l);
+  const count = () => { const ns = new Set(); for (const p of pages) extractHoles(p.html, p.u).holes.forEach(h => (h.img || h.text) && ns.add(h.n)); return ns.size; };
+  if (count() < 9) {
+    const o = new URL(startUrl).origin;
+    for (const g of ['/percorso/', '/il-percorso/', '/percorsi/', '/campo/', '/il-campo/', '/le-buche/', '/buche/', '/course/', '/the-course/', '/golf/', '/il-golf/', '/campo-da-golf/', '/percorso-di-gioco/', '/it/percorso/', '/it/il-percorso/']) {
+      const h = await visit(o + g); if (h) for (const l of courseLinks(h, o + g).filter(l => /(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 27)) await visit(l);
+      if (count() >= 9) break;
+    }
+  }
   // unisce le buche trovate: per ogni buca tiene il dato più ricco
   const holes = new Map(); let mappa = null, best = null;
   for (const p of pages) {
