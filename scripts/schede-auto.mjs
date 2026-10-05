@@ -109,9 +109,11 @@ export async function readClub(startUrl, fetchText, log = () => {}) {
   const first = await visit(startUrl); if (!first) throw new Error('Non riesco ad aprire il link');
   const title = decode((first.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '').replace(/\s+/g, ' ').trim();
   let links = courseLinks(first, startUrl);
-  const second = links.filter(l => !/(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 6);
+  // se la pagina data ha già il percorso (almeno 9 buche) non vado su altre pagine: potrebbero essere un altro percorso
+  const enough = extractHoles(first, startUrl).holes.filter(h => h.img || h.text).length >= 9;
+  const second = enough ? [] : links.filter(l => !/(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 6);
   for (const l of second) { const h = await visit(l); if (h) links = links.concat(courseLinks(h, l)); }
-  for (const l of [...new Set(links)].filter(l => /(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 27)) await visit(l);
+  if (!enough) for (const l of [...new Set(links)].filter(l => /(buca|hole)[-_ ]?\d/i.test(l)).slice(0, 27)) await visit(l);
   // unisce le buche trovate: per ogni buca tiene il dato più ricco
   const holes = new Map(); let mappa = null, best = null;
   for (const p of pages) {

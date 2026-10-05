@@ -81,6 +81,8 @@ body.race #plays, body.race #iElevW, body.race #gSlope, body.race #gMeasure{disp
 .sheet h2{margin:0 0 4px;font-size:20px}
 .sheet h3{margin:16px 0 6px;font-size:15px;color:var(--muted);font-weight:600}
 .sheet p.sub{margin:0 0 12px;color:var(--muted);font-size:14px;line-height:1.4}
+#cLive{position:sticky;top:-1px;z-index:2;margin:-4px -4px 10px;padding:10px 12px;border-radius:12px;background:#12301f;border:1px solid var(--line);font-size:15px;line-height:1.35}
+#cLive b{font-size:24px;color:#ffd23f}#cLive .sm{color:var(--muted);font-size:13px}#cLive button{margin-top:6px}
 #cImgBox{overflow:auto;border-radius:10px;background:#000;-webkit-overflow-scrolling:touch;max-height:62vh}
 #cImg{display:block;width:100%;height:auto}
 #cImgBox.zoom #cImg{width:260%;max-width:none}
@@ -276,6 +278,7 @@ table.score tr{cursor:pointer}
 
 <div class="sheet" id="sCard" hidden><div>
   <button class="close" data-close>×</button>
+  <div id="cLive"></div>
   <h2 id="cTitle">Scheda buca</h2>
   <p class="sub" id="cSub"></p>
   <div id="cImgBox"><img id="cImg" alt="Disegno della buca dal sito del circolo"></div>
@@ -634,7 +637,19 @@ function openCard(n){
   $('#cSwitch').hidden=!others.length; if(others.length) $('#cSwitch').textContent='Passa al percorso '+others[0].percorso;
   $('#cSrc').innerHTML='Dal sito del circolo: <a href="'+esc(c.fonte)+'" target="_blank" rel="noopener" style="color:inherit">apri la pagina</a>';
   $('#cPrev').disabled=cardN<=1; $('#cNext').disabled=cardN>=c.buche.length;
+  cardLive();
   if($('#sCard').hidden) openSheet('#sCard');
+}
+// distanze GPS in diretta dentro la scheda (le stesse della mappa satellitare)
+function cardLive(){
+  const box=$('#cLive'), here=holeNo();
+  if(!S.me){ box.innerHTML='<span class="sm">Distanze: aspetto la posizione GPS…</span>'; return; }
+  if(cardN!==here){ box.innerHTML=`<span class="sm">Stai giocando la buca ${here}: le distanze sono sulla sua scheda</span><br><button class="btn" id="cGoMine">Vai alla buca ${here}</button>`;
+    $('#cGoMine').onclick=()=>openCard(here); return; }
+  const pin=$('#dPin').textContent, fr=$('#dFront').textContent, bk=$('#dBack').textContent, lbl=$('#pinLbl').textContent;
+  let html=`${esc(lbl)} <b>${esc(pin)}</b>${/km/.test(pin)?'':' m'} <span class="sm">· inizio ${esc(fr)} · fondo ${esc(bk)}</span>`;
+  if(!S.race && $('#iPlays').textContent!=='—') html+=`<br><span class="sm">Gioca come</span> ${esc($('#iPlays').textContent)} · ${esc($('#iClub').textContent)} <span class="sm">· vento ${$('#iWind').textContent?esc($('#iWind').textContent):'—'}</span>`;
+  box.innerHTML=html;
 }
 $('#btnCard').onclick=()=>openCard();
 $('#cImgBox').onclick=()=>$('#cImgBox').classList.toggle('zoom');
@@ -1154,6 +1169,7 @@ function update(){
     $('#iWind').innerHTML=S.wx?windArrow(S.wx.dir+180)+Math.round(S.wx.speed)+' km/h':'—';
   }
   if(S.lastShot && me){ $('#iShotWrap').hidden=false; $('#iShot').textContent=fmt(dist(S.lastShot,me))+' m'; }
+  if(!$('#sCard').hidden) cardLive();
   drawTarget();
   if(!far) pushWatch(front,pinD,back);
 }
