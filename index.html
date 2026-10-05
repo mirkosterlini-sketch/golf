@@ -87,7 +87,8 @@ body.race #plays, body.race #iElevW, body.race #gSlope, body.race #gMeasure{disp
 #cLens{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 #cLens span{padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.08);font-size:13px}
 #cLens span.mytee{background:#ffd23f;color:#111;font-weight:700}
-#cText{line-height:1.5;font-size:15px;margin:6px 0 12px}
+#cText,#cTip{line-height:1.5;font-size:15px;margin:6px 0 12px}
+#cVideo{display:inline-block;text-decoration:none;margin:0 6px 6px 0}
 .b2{display:flex;gap:10px}.b2 .btn{flex:1}
 #gNote{margin-top:6px;font-size:13px;line-height:1.35;color:#ffe9a8}
 .sheet .close{float:right;font-size:26px;line-height:1;padding:0 4px;color:var(--muted)}
@@ -280,7 +281,10 @@ table.score tr{cursor:pointer}
   <div id="cImgBox"><img id="cImg" alt="Disegno della buca dal sito del circolo"></div>
   <p class="hint" id="cImgHint">Tocca il disegno per ingrandirlo, poi scorri col dito</p>
   <div id="cLens"></div>
+  <div class="hint" id="cTextLbl" hidden></div>
   <p id="cText"></p>
+  <div id="cTipBox" hidden><div class="hint" id="cTipLbl">Consiglio</div><p id="cTip"></p></div>
+  <p><a class="btn" id="cVideo" target="_blank" rel="noopener" hidden>▶ Guarda il video della buca</a> <button class="btn" id="cSwitch" hidden></button></p>
   <div class="b2"><button class="btn" id="cPrev">‹ Buca prima</button><button class="btn" id="cNext">Buca dopo ›</button></div>
   <p class="hint" id="cSrc"></p>
 </div></div>
@@ -588,38 +592,57 @@ async function loadCards(){
 function findCard(c){
   if(!S.cards) S.cards=store.get('cards',null);
   const list=S.cards&&S.cards.circoli; if(!list||!c) return null;
+  const forced=store.get('cardmap.'+c.id,null);
+  if(forced){ const f=list.find(x=>x.key===forced); if(f) return f; }
   if(c.ges){ const byGes=list.find(x=>x.ges===c.ges.id); if(byGes) return byGes; }
   let best=null, bs=0; list.forEach(x=>{ const sc=gesScore({name:x.nome},c.name); if(sc>bs){bs=sc;best=x;} });
   return bs>=0.5 ? best : null;
 }
 function cardHole(n){ const c=S.course&&S.course.card; if(!c) return null; return c.buche.find(b=>b.n===n)||null; }
-function cardImg(n){ const c=S.course.card; return c.img.replace('{n}',n); }
+// immagine della buca: quella del circolo, se manca la mappa del campo
+function cardImg(n){ const c=S.course.card, b=cardHole(n); return (b&&b.img) || (c.img&&c.img.replace('{n}',n)) || c.mappa || ''; }
 function holeNo(){ const h=curHole(); return h ? (parseInt(h.ref,10)||S.hole+1) : S.hole+1; }
+// par, HCP e metri: dalla scheda del circolo, se mancano dal cartellino GesGolf (solo per il percorso che corrisponde)
+function cardData(n){ const c=S.course.card, b=cardHole(n)||{}, g=c.ges&&S.course.ges&&S.course.ges.id===c.ges ? S.course.ges : null, gh=g&&g.holes.find(h=>h.n===n);
+  return { par:b.par||(gh&&gh.par), hcp:b.hcp||(gh&&gh.hcp), len:b.len||(gh&&gh.len)||[],
+    tees:c.teeNomi || (g&&g.tees.map(t=>t.name.toLowerCase())) }; }
 // le frasi della descrizione che parlano del green (pendenze, livelli, dimensioni)
-function greenNote(text){ if(!text) return '';
-  return text.split(/(?<=[.!?])\s+/).filter(f=>/green/i.test(f)).join(' '); }
+function greenNote(b){ if(!b) return '';
+  const fr=[b.text,b.tip].filter(Boolean).join(' ').split(/(?<=[.!?])\s+/);
+  const shape=/pendenz|pendent|livell|gradin|piatt|scende|inclinat|sopraelevat|rialzat|ondulat|in salita|in discesa|scivol|mosso/i;
+  let pick=fr.filter(f=>/green/i.test(f)&&shape.test(f));
+  if(!pick.length) pick=fr.filter(f=>/green/i.test(f)&&f.length<220);
+  let out=pick.join(' '); if(out.length>320) out=out.slice(0,317).replace(/\s\S*$/,'')+'…'; return out; }
 function updateCardBtn(){ $('#btnCard').hidden=!(S.course&&S.course.card); }
 let cardN=1;
 function openCard(n){
   const c=S.course&&S.course.card; if(!c){ toast('Per questo campo non ho la scheda del circolo'); return; }
-  cardN=n||holeNo(); const b=cardHole(cardN);
-  $('#cTitle').textContent='Buca '+cardN+(b?' · Par '+b.par+' · HCP '+b.hcp:'');
-  $('#cSub').textContent=c.nome;
+  cardN=n||holeNo(); if(cardN>c.buche.length) cardN=1; const b=cardHole(cardN), d=cardData(cardN);
+  $('#cTitle').textContent='Buca '+cardN+(b&&b.nome?' · '+b.nome:'')+(d.par?' · Par '+d.par:'')+(d.hcp?' · HCP '+d.hcp:'');
+  $('#cSub').textContent=c.nome+(c.nota?' — '+c.nota:'');
   $('#cImgBox').classList.remove('zoom');
-  $('#cImg').src=cardImg(cardN);
-  const g=S.course.ges, tees=g&&g.tees&&b&&g.tees.length===b.len.length ? g.tees.map(t=>t.name) : null;
-  $('#cLens').innerHTML=b ? b.len.map((l,i)=>`<span class="${tees&&tees[i]===S.tee?'mytee':''}">${tees?esc(tees[i].toLowerCase())+' ':''}${l} m</span>`).join('') : '';
-  $('#cText').textContent=b ? b.text : 'Descrizione non disponibile per questa buca.';
+  const src=cardImg(cardN); $('#cImgBox').hidden=!src; $('#cImgHint').hidden=!src;
+  if(src && $('#cImg').getAttribute('src')!==src) $('#cImg').src=src;
+  $('#cImgHint').textContent=(b&&b.img)?'Tocca la foto per ingrandirla, poi scorri col dito':'Per questa buca il circolo non ha una foto: ecco la mappa del campo';
+  const tees=d.tees&&d.tees.length===d.len.length ? d.tees : null, mine=(S.tee||'').toLowerCase();
+  $('#cLens').innerHTML=d.len.map((l,i)=>l?`<span class="${tees&&tees[i]===mine?'mytee':''}">${tees?esc(tees[i])+' ':''}${l} m</span>`:'').join('');
+  $('#cTextLbl').textContent=c.textLabel||''; $('#cTextLbl').hidden=!c.textLabel;
+  $('#cText').textContent=b&&b.text ? b.text : 'Il circolo non ha una descrizione per questa buca.';
+  $('#cTipLbl').textContent=c.tipLabel||'Consiglio'; $('#cTipBox').hidden=!(b&&b.tip); $('#cTip').textContent=b&&b.tip||'';
+  $('#cVideo').hidden=!(b&&b.video); if(b&&b.video) $('#cVideo').href=b.video;
+  const others=S.cards.circoli.filter(x=>x.club&&x.club===c.club&&x.key!==c.key);
+  $('#cSwitch').hidden=!others.length; if(others.length) $('#cSwitch').textContent='Passa al percorso '+others[0].percorso;
   $('#cSrc').innerHTML='Dal sito del circolo: <a href="'+esc(c.fonte)+'" target="_blank" rel="noopener" style="color:inherit">apri la pagina</a>';
   $('#cPrev').disabled=cardN<=1; $('#cNext').disabled=cardN>=c.buche.length;
   if($('#sCard').hidden) openSheet('#sCard');
 }
 $('#btnCard').onclick=()=>openCard();
 $('#cImgBox').onclick=()=>$('#cImgBox').classList.toggle('zoom');
-$('#cImg').onerror=()=>{ $('#cImgHint').textContent='Disegno non disponibile adesso (serve la rete la prima volta)'; };
-$('#cImg').onload=()=>{ $('#cImgHint').textContent='Tocca il disegno per ingrandirlo, poi scorri col dito'; };
+$('#cImg').onerror=()=>{ $('#cImgHint').textContent='Foto non disponibile adesso (la prima volta serve la rete)'; };
 $('#cPrev').onclick=()=>openCard(cardN-1);
 $('#cNext').onclick=()=>openCard(cardN+1);
+$('#cSwitch').onclick=()=>{ const c=S.course.card, o=S.cards.circoli.find(x=>x.club&&x.club===c.club&&x.key!==c.key); if(!o) return;
+  store.set('cardmap.'+S.course.id,o.key); S.course.card=o; openCard(cardN); toast('Schede del percorso '+o.percorso); };
 
 async function loadGes(){
   try{ const r=await timeoutFetch('data/gesgolf.json?d='+today(),{},15000); if(!r.ok) return;
@@ -918,7 +941,7 @@ function enterGreenView(){
   if(S.round.pins[holeKey()]){ const into=Math.round(ext.front + (proj(c).to(pp)[0]*Math.sin(rad(ext.ax))+proj(c).to(pp)[1]*Math.cos(rad(ext.ax))));
     s=`Bandiera a ${into} m dall'ingresso · `+s; }
   $('#gSub').textContent=s;
-  const note=greenNote((cardHole(holeNo())||{}).text);
+  const note=greenNote(cardHole(holeNo()));
   $('#gNote').textContent=note?'Dal circolo: '+note:''; $('#gNote').hidden=!note;
   $('#gcard').hidden=false;
 }
@@ -1335,7 +1358,7 @@ async function downloadTiles(){
   urls=[...new Set(urls)];
   if(urls.length>8000){ toast('Il campo è troppo grande da scaricare tutto'); return; }
   // salva anche l'app e i cartellini, così si apre senza rete
-  if(S.course.card) S.course.card.buche.forEach(b=>urls.push(cardImg(b.n)));
+  if(S.course.card) [...new Set(S.course.card.buche.map(b=>cardImg(b.n)).concat(S.course.card.mappa||[]))].filter(Boolean).forEach(u=>urls.push(u));
   ['./', 'data/gesgolf.json', 'data/schede.json', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'].forEach(u=>fetch(u).catch(()=>{}));
   let done=0, fail=0; $('#dlBtn').disabled=true;
   const work=urls.slice(), run=async()=>{ while(work.length){ const u=work.pop();
@@ -1392,7 +1415,7 @@ $('#impFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; impo
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=6',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=7',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
 async function toggleWatch(){
   if(S.watch){ S.watch=false; $('#watchBtn').textContent='Attiva'; $('#watchState').textContent='Spento';
     if(swReg){ (await swReg.getNotifications({tag:'golf'})).forEach(n=>n.close()); } releaseWake(); return; }

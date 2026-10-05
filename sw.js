@@ -13,7 +13,8 @@ self.addEventListener('activate', e => e.waitUntil(
 self.addEventListener('fetch', e => {
   const req = e.request; if (req.method !== 'GET') return;
   const url = req.url;
-  if (TILE_HOSTS.test(url)) {
+  const clubImg = !url.startsWith(self.location.origin) && /\/wp-content\/uploads\/|\/download\/percorso\/|ytimg\.com\/vi\//.test(url);
+  if (TILE_HOSTS.test(url) || clubImg) {
     e.respondWith(caches.open(TILES).then(async c => {
       const hit = await c.match(url);
       if (hit) return hit;
