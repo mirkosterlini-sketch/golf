@@ -252,6 +252,7 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
   <div class="row"><div class="grow"><b>Foto aerea</b><div class="hint" id="imgState">Satellite</div></div><button class="btn" id="imgBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Scarica la mappa del campo</b><div class="hint" id="dlState">Così funziona anche dove non c'è segnale</div></div><button class="btn" id="dlBtn">Scarica</button></div>
+  <div class="row"><div class="grow"><b>Passa i dati a un altro dispositivo</b><div class="hint">Buche disegnate, pendenze, bastoni e impostazioni, dal PC al telefono o viceversa</div></div><button class="btn" id="syncBtn">Apri</button></div>
   <div class="row"><div class="grow"><b>I miei bastoni</b><div class="hint">Le tue distanze medie, per il consiglio del bastone</div></div><button class="btn" id="openClubs">Modifica</button></div>
   <div class="row"><div class="grow"><b>Campi vicini sulla mappa</b></div><button class="btn" id="showNear">Mostra</button></div>
   <div class="row"><div class="grow"><b>Centra la mappa su di me</b></div><button class="btn" id="centerMe">Centra</button></div>
@@ -278,6 +279,18 @@ table.score tr{cursor:pointer}
   <button class="btn main block" id="mGo">Misura qui</button>
   <button class="btn block" id="mDel">Cancella le misure di questo green</button>
   <p class="hint" style="margin-top:10px">La freccia indica dove scende la palla. Per una misura precisa l'app ti chiede di girare il telefono di mezzo giro e misurare di nuovo: così annulla l'errore del sensore. Tieni lontani bastoni e carrello (disturbano la bussola).<br><b>In gara ufficiale</b> le Regole del golf non permettono di misurare le pendenze: usala nei giri di allenamento, le misure restano salvate.</p>
+</div></div>
+
+<div class="sheet" id="sSync" hidden><div>
+  <button class="close" data-close>×</button>
+  <h2>Passa i dati a un altro dispositivo</h2>
+  <p class="sub">Sul dispositivo dove hai i dati premi <b>Prepara il file</b> e mandalo all'altro (WhatsApp, email, Google Drive). Sull'altro dispositivo apri l'app e premi <b>Carica il file</b>. I dati si uniscono a quelli che ci sono già.</p>
+  <button class="btn main block" id="expFile">Prepara il file</button>
+  <label class="btn block" style="text-align:center;cursor:pointer">Carica il file<input type="file" id="impFile" accept=".json,.txt,application/json,text/plain" hidden></label>
+  <h3>Oppure con un codice da copiare</h3>
+  <textarea id="syncCode" rows="4" placeholder="Incolla qui il codice ricevuto" style="font-size:12px"></textarea>
+  <div style="display:flex;gap:8px"><button class="btn block" id="expCode">Copia il mio codice</button><button class="btn block" id="impCode">Importa il codice</button></div>
+  <p class="hint" id="syncState"></p>
 </div></div>
 
 <div class="sheet" id="sClubs" hidden><div>
@@ -1258,6 +1271,47 @@ async function downloadTiles(){
   showDlState(); renderFavs();
   toast('Mappa di '+S.course.name+' salvata sul telefono');
 }
+
+/* ============ passaggio dati tra dispositivi ============ */
+const SKIP=/^golf\.(ges|round|dl\.)/;   // cartellini (si riscaricano), giro del giorno, copie mappa del dispositivo
+function collect(){ const out={}; for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('golf.')&&!SKIP.test(k)) out[k]=localStorage.getItem(k); } return out; }
+async function pack(obj){ const txt=JSON.stringify({app:'caddie-mirko',v:1,data:obj});
+  if(typeof CompressionStream==='undefined') return 'J'+btoa(unescape(encodeURIComponent(txt)));
+  const buf=new Uint8Array(await new Response(new Blob([txt]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  let b=''; for(let i=0;i<buf.length;i+=8192) b+=String.fromCharCode(...buf.subarray(i,i+8192)); return 'Z'+btoa(b); }
+async function unpack(code){ code=code.trim();
+  if(code.startsWith('{')) return JSON.parse(code);
+  const kind=code[0], bin=atob(code.slice(1));
+  if(kind==='J') return JSON.parse(decodeURIComponent(escape(bin)));
+  const bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+  return JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text()); }
+function mergeInto(k,val){
+  const cur=localStorage.getItem(k);
+  if(cur && /^golf\.(custom|slopes)\./.test(k)){ try{ const a=JSON.parse(cur), b=JSON.parse(val);
+    for(const kk in b){ if(k.startsWith('golf.slopes.') && a[kk] && a[kk].pts && b[kk].pts){ const seen=new Set(a[kk].pts.map(p=>p.t)); b[kk].pts=a[kk].pts.concat(b[kk].pts.filter(p=>!seen.has(p.t))); }
+      a[kk]={...(a[kk]||{}),...b[kk]}; }
+    localStorage.setItem(k,JSON.stringify(a)); return; }catch(e){} }
+  if(k==='golf.saved' && cur){ try{ const a=JSON.parse(cur), b=JSON.parse(val); b.forEach(x=>{ if(!a.find(y=>y.id===x.id)) a.push(x); }); localStorage.setItem(k,JSON.stringify(a)); return; }catch(e){} }
+  localStorage.setItem(k,val);
+}
+async function importCode(code){
+  try{ const j=await unpack(code); if(!j||j.app!=='caddie-mirko'||!j.data) throw 0;
+    const keys=Object.keys(j.data); keys.forEach(k=>{ if(k.startsWith('golf.')&&!SKIP.test(k)) mergeInto(k,j.data[k]); });
+    $('#syncState').textContent='Importati '+keys.length+' elementi. Riapro l\'app…'; toast('Dati importati');
+    setTimeout(()=>location.reload(),1200);
+  }catch(e){ $('#syncState').textContent='Il codice o il file non è valido. Controlla di averlo copiato tutto.'; }
+}
+$('#syncBtn').onclick=()=>{ $('#syncState').textContent=''; $('#syncCode').value=''; openSheet('#sSync'); };
+$('#expCode').onclick=async()=>{ const code=await pack(collect()); $('#syncCode').value=code;
+  try{ await navigator.clipboard.writeText(code); $('#syncState').textContent='Codice copiato ('+Math.round(code.length/1024)+' kB): incollalo nell\'app sull\'altro dispositivo'; }
+  catch(e){ $('#syncCode').select(); $('#syncState').textContent='Seleziona tutto il codice qui sopra e copialo'; } };
+$('#impCode').onclick=()=>{ const v=$('#syncCode').value; if(!v.trim()){ toast('Incolla prima il codice'); return; } importCode(v); };
+$('#expFile').onclick=async()=>{ const code=await pack(collect()), name='caddie-mirko-'+today()+'.txt';
+  const file=new File([code],name,{type:'text/plain'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){ try{ await navigator.share({files:[file],title:'Dati Caddie Mirko'}); $('#syncState').textContent='File pronto: aprilo con l\'app sull\'altro dispositivo'; return; }catch(e){ if(e.name==='AbortError') return; } }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  $('#syncState').textContent='Salvato il file '+name+' nei Download: mandalo all\'altro dispositivo e caricalo lì'; };
+$('#impFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; importCode(await f.text()); e.target.value=''; };
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
