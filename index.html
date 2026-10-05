@@ -386,7 +386,7 @@ if(!S.round || S.round.date!==today()) S.round=null;
 function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}}; store.set('round',S.round); }
 
 /* ============ mappa ============ */
-const map = L.map('map',{zoomControl:false, maxZoom:20}).setView([44.4,8.9],9);
+const map = L.map('map',{zoomControl:false, maxZoom:20, zoomSnap:0.25, zoomDelta:0.5, wheelPxPerZoomLevel:120}).setView([44.4,8.9],9);
 // foto di base: satellite Esri (nitida fino al livello 19, poi l'app non ingrandisce oltre il 20 per non sgranare)
 const ESRI=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
   {maxNativeZoom:19, maxZoom:20, attribution:'Immagini © Esri · Campi © OpenStreetMap'}).addTo(map);
@@ -395,9 +395,9 @@ const M3857=20037508.342789244;
 function tileBBox(c){ const n=2**c.z, w=2*M3857/n; return [-M3857+c.x*w, M3857-(c.y+1)*w, -M3857+(c.x+1)*w, M3857-c.y*w].join(','); }
 const REGION_IMG={
   Liguria:{name:'Ortofoto Regione Liguria 2022', make:()=>L.tileLayer.wms('https://geoservizi.regione.liguria.it/geoserver/M2555/wms',
-    {layers:'L10401',format:'image/png',transparent:true,version:'1.3.0',maxZoom:21,attribution:'Ortofoto 2022 © Regione Liguria'})},
+    {layers:'L10401',format:'image/jpeg',version:'1.3.0',maxZoom:21,attribution:'Ortofoto 2022 © Regione Liguria'})},
   Lombardia:{name:'Ortofoto Regione Lombardia 2021', make:()=>new (L.TileLayer.extend({getTileUrl(c){
-    return 'https://www.cartografia.servizirl.it/arcgis2/rest/services/BaseMap/Ortofoto2021/ImageServer/exportImage?bbox='+tileBBox(c)+'&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=true&f=image'; }}))('',
+    return 'https://www.cartografia.servizirl.it/arcgis2/rest/services/BaseMap/Ortofoto2021/ImageServer/exportImage?bbox='+tileBBox(c)+'&bboxSR=3857&imageSR=3857&size=256,256&format=jpg&f=image'; }}))('',
     {maxZoom:21,attribution:'Ortofoto AGEA 2021 © Regione Lombardia'})}
 };
 let regLayer=null;
@@ -1134,6 +1134,7 @@ function startGps(){
   {enableHighAccuracy:true, maximumAge:2000, timeout:20000});
 }
 function noFix(){ if(S.course) return;
+  $('#courseName').textContent='Scegli un campo';
   const last=store.get('lastCourse',null), d=last&&store.get('course.'+last,null);
   $('#nearList').innerHTML='<p class="hint">Posizione non disponibile: cerca il campo per nome qui sotto.</p>';
   if(d) buildCourse(d); else openSheet('#sCourse'); }
@@ -1239,10 +1240,10 @@ function tilesFor(b, z){ const t=(lat,lon)=>{ const n=2**z, x=Math.floor((lon+18
 // Gli indirizzi delle foto devono essere identici a quelli che usa la mappa, altrimenti la copia salvata non viene trovata:
 // li faccio generare allo stesso strato su una mappa nascosta.
 let dlMap=null;
-function tileUrlsFor(layerMaker, z0, z1){
+function tileUrlsFor(layerMaker, z0, z1, areas){
   if(!dlMap){ const d=document.createElement('div'); d.style.cssText='position:absolute;left:-9999px;width:256px;height:256px'; document.body.appendChild(d); dlMap=L.map(d,{zoomControl:false,attributionControl:false}).setView([44,9],15); }
   const lay=layerMaker(); lay.addTo(dlMap); const urls=[];
-  for(let z=z0;z<=z1;z++){ lay._tileZoom=z; for(const [zz,x,y] of tilesFor(S.course.bounds,z)){ const c=L.point(x,y); c.z=zz; urls.push(lay.getTileUrl(c)); } }
+  for(let z=z0;z<=z1;z++){ lay._tileZoom=z; for(const [zz,x,y] of (areas||[S.course.bounds]).flatMap(b=>tilesFor(b,z))){ const c=L.point(x,y); c.z=zz; urls.push(lay.getTileUrl(c)); } }
   dlMap.removeLayer(lay); return urls;
 }
 function dlInfo(){ return S.course ? store.get('dl.'+S.course.id,null) : null; }
@@ -1255,7 +1256,11 @@ async function downloadTiles(){
   if(!S.course){ toast('Carica prima un campo'); return; }
   const reg=REGION_IMG[S.course.region], useReg=reg && store.get('img','auto')!=='esri';
   let urls=tileUrlsFor(()=>L.tileLayer(ESRI._url,{maxNativeZoom:19}), 15, 19);
-  if(useReg) urls=urls.concat(tileUrlsFor(reg.make, 15, 20));
+  if(useReg){ // foto della Regione: tutto il campo fino al livello 19, il massimo dettaglio (20) solo attorno a green e tee
+    urls=urls.concat(tileUrlsFor(reg.make, 15, 19));
+    const near=[...S.course.holes.flatMap(h=>[h.green&&centroid(h.green), h.tee]), ...S.course.greens.map(centroid)].filter(Boolean)
+      .map(c=>{ const a=offset(offset(c,0,45),270,45), b=offset(offset(c,180,45),90,45); return [[b[0],a[1]],[a[0],b[1]]]; });
+    urls=urls.concat(tileUrlsFor(reg.make, 20, 20, near)); }
   urls=[...new Set(urls)];
   if(urls.length>8000){ toast('Il campo è troppo grande da scaricare tutto'); return; }
   // salva anche l'app e i cartellini, così si apre senza rete
