@@ -1579,12 +1579,17 @@ function hvRender(ctx, W, H, opt={}){
   const M=hvTransform(g, W, H, opt.padTop??70, opt.padBot??24), s=Math.hypot(M.a,M.b), mm=1/g.mpp; // mm = pixel(z20) per metro
   ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#0d1a12'; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.setTransform(M.a*HV.dpr*(opt.scale||1),M.b*HV.dpr*(opt.scale||1),M.c*HV.dpr*(opt.scale||1),M.d*HV.dpr*(opt.scale||1),M.e*HV.dpr*(opt.scale||1),M.f*HV.dpr*(opt.scale||1));
-  if(opt.tiles){ ctx.filter='brightness(.42) saturate(.6) blur(1px)'; hvTiles(ctx,M,W,H); ctx.filter='none'; }
+  if(opt.tiles){ hvTiles(ctx,M,W,H); ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='rgba(8,18,12,.42)'; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height); ctx.restore(); }
   // pista: alone, rough scuro, rough (dal tee a dietro il green)
   const full=g.pl.concat([ (()=>{ const a=g.pl[g.pl.length-2], b=g.pl[g.pl.length-1], d=Math.hypot(b[0]-a[0],b[1]-a[1])||1; return [b[0]+(b[0]-a[0])/d*22*mm, b[1]+(b[1]-a[1])/d*22*mm]; })() ]);
   const wide=Math.min(70, Math.max(46, g.len*0.14));
   // la pista avvolge anche fairway, green e ostacoli vicini (forma "morbida" come nelle app da campo)
-  const blobs=g.fairs.concat([g.h.green], g.hz.map(z=>z.poly));
+  const near=(poly,m)=>poly.some(p=>distToPolyline(p,g.line)<m);
+  const blobs=g.fairs.concat([g.h.green], g.hz.filter(z=>z.type!=='water'&&near(z.poly,30)).map(z=>z.poly));
+  // zona della pista (cerchi lungo la linea + fairway/green/bunker): fuori da qui acqua e bunker non si disegnano
+  const clip=new Path2D(), Rr=(wide+26)/2*mm; let prev=null;
+  full.forEach(q=>{ if(prev){ const d=Math.hypot(q[0]-prev[0],q[1]-prev[1]), n=Math.ceil(d/(4*mm)); for(let i=1;i<=n;i++){ const x=prev[0]+(q[0]-prev[0])*i/n, y=prev[1]+(q[1]-prev[1])*i/n; clip.moveTo(x+Rr,y); clip.arc(x,y,Rr,0,7); } } else { clip.moveTo(q[0]+Rr,q[1]); clip.arc(q[0],q[1],Rr,0,7); } prev=q; });
+  blobs.forEach(b=>{ b.forEach((p,i)=>{ const q=P20(p); i?clip.lineTo(q[0],q[1]):clip.moveTo(q[0],q[1]); }); clip.closePath(); });
   for(const [col,extra] of [[HVC.halo,26],[HVC.rough2,10],[HVC.rough,0]]){
     ctx.strokeStyle=col; ctx.fillStyle=col; hvStroke(ctx, full, (wide+extra)*mm);
     blobs.forEach(b=>{ hvPath(ctx,b); ctx.fill(); ctx.lineWidth=(18+extra)*mm; ctx.stroke(); }); }
@@ -1598,10 +1603,12 @@ function hvRender(ctx, W, H, opt={}){
   else { const pT=g.pl[0], a=g.pl[1]; const d=Math.hypot(a[0]-pT[0],a[1]-pT[1])||1, ux=(a[0]-pT[0])/d, uy=(a[1]-pT[1])/d;
     ctx.strokeStyle=HVC.tee; hvStroke(ctx, [[pT[0]-ux*7*mm,pT[1]-uy*7*mm],[pT[0]+ux*7*mm,pT[1]+uy*7*mm]], 7*mm); }
   // acqua e bunker
-  g.hz.filter(z=>z.type==='water').forEach(z=>{ hvPath(ctx,z.poly); ctx.fillStyle=HVC.water; ctx.fill(); ctx.strokeStyle=HVC.waterE; ctx.stroke(); });
+  ctx.save(); ctx.clip(clip);
+  g.hz.filter(z=>z.type==='water').forEach(z=>{ hvPath(ctx,z.poly); ctx.fillStyle=HVC.water; ctx.fill(); ctx.strokeStyle=HVC.waterE; ctx.lineWidth=1.2/s; ctx.stroke(); });
   // green
   hvPath(ctx,g.h.green); ctx.fillStyle=HVC.green; ctx.fill(); ctx.strokeStyle=HVC.greenE; ctx.lineWidth=1.5/s; ctx.stroke();
   g.hz.filter(z=>z.type!=='water').forEach(z=>{ hvPath(ctx,z.poly); ctx.fillStyle=HVC.sand; ctx.fill(); ctx.strokeStyle=HVC.sandE; ctx.lineWidth=1/s; ctx.stroke(); });
+  ctx.restore();
   // da qui in pixel dello schermo
   const k=HV.dpr*(opt.scale||1); ctx.setTransform(k,0,0,k,0,0);
   const scr=ll=>{ const q=P20(ll), p=M.transformPoint(new DOMPoint(q[0],q[1])); return [p.x,p.y]; };
@@ -1609,7 +1616,7 @@ function hvRender(ctx, W, H, opt={}){
   const meOk=S.me && dist(S.me,pp)<1500;
   // colpi già giocati su questa buca (pulsante "Colpo"), poi io, il punto toccato e la bandiera
   ((S.round&&S.round.shots&&S.round.shots[String(g.h.ref)])||[]).forEach(p=>{ if(!meOk||dist(p,S.me)>3) pts.push({ll:p, shot:true}); });
-  if(meOk) pts.push({ll:S.me, me:true});
+  if(meOk) pts.push({ll:S.me, me:true}); else pts.unshift({ll:g.T, tee:true});
   if(S.target) pts.push({ll:S.target, tgt:true});
   pts.push({ll:pp, pin:true});
   const R=opt.small?13:15;
