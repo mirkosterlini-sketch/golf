@@ -660,6 +660,7 @@ function showHole(fit){
   const par=holePar(S.hole), si=holeSI(S.hole), len=holeLen(h);
   $('#holeNum').textContent='Buca '+h.ref; $('#holePar').textContent='Par '+par+(si?' · HCP '+si:'')+(len?' · '+len+' m':'');
   store.set('hole.'+S.course.id, S.hole);
+  if(!h.missing && (S.mode==='drawTee'||S.mode==='drawGreen')){ S.draw=null; setMode(null); } // la buca c'è già: niente modalità disegno rimasta aperta
   if(h.missing){
     clearTarget(); update();
     if(fit) map.fitBounds(S.course.bounds,{paddingTopLeft:[20,90],paddingBottomRight:[20,250]});
@@ -797,6 +798,7 @@ $('#flagClear').onclick=()=>{ closeSheets(); delete S.round.pins[holeKey()]; sto
 function enterGreenView(){
   if(S.view!=='green'){ try{ history.pushState({green:1},''); }catch(e){} }
   const h=curHole(); if(!h||!h.green){ toast(h?'Questo green non è disegnato sulla mappa':'Carica prima un campo'); return; }
+  if(S.mode==='drawTee'||S.mode==='drawGreen'){ S.draw=null; setMode(null); }
   S.view='green'; $('#tGreen').classList.add('on');
   map.fitBounds(h.green,{paddingTopLeft:[20,190],paddingBottomRight:[20,260],maxZoom:hiRes()?21:20});
   drawSlopeField();
