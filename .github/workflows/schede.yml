@@ -1,0 +1,50 @@
+name: Aggiungi schede da un link
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Link della pagina del percorso'
+        required: true
+      campo:
+        description: 'Nome del campo (facoltativo)'
+        required: false
+      osm:
+        description: 'Codice OpenStreetMap del campo (facoltativo)'
+        required: false
+permissions:
+  contents: write
+  issues: write
+jobs:
+  leggi:
+    # solo le richieste fatte da Mirko, che iniziano con "Schede:"
+    if: github.event_name == 'workflow_dispatch' || (github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, 'Schede:'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Leggi il sito del circolo
+        id: leggi
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title || inputs.url }}
+          ISSUE_BODY: ${{ github.event.issue.body || format('campo: {0}\nosm: {1}', inputs.campo, inputs.osm) }}
+        run: |
+          node scripts/schede-da-link.mjs | tee out.txt
+          grep '^RISULTATO:' out.txt | sed 's/^RISULTATO: //' > risposta.txt || echo "Qualcosa è andato storto: guarda i dettagli dell'azione." > risposta.txt
+      - name: Salva le schede
+        run: |
+          git config user.name "aggiornamento-automatico"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/schede.json
+          git diff --cached --quiet || (git commit -m "Schede da link (${{ github.event.issue.number && format('richiesta #{0}', github.event.issue.number) || 'avvio manuale' }})" && git pull --rebase origin main && git push)
+      - name: Rispondi e chiudi la richiesta
+        if: github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body-file risposta.txt
+          gh issue close ${{ github.event.issue.number }} --repo ${{ github.repository }}

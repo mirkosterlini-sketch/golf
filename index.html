@@ -263,6 +263,7 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Sono sul green</b><div class="hint">Salva la posizione esatta del green di questa buca</div></div><button class="btn" id="hereBtn">Salva</button></div>
   <div class="row"><div class="grow"><b>Ostacoli di questa buca</b><div class="hint">Bunker e acqua: quanto manca e quanto per superarli</div></div><button class="btn" id="openHaz">Apri</button></div>
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
+  <div class="row"><div class="grow"><b>Schede da un link</b><div class="hint">Incolli il link del sito di un circolo nuovo e l'app prepara le schede delle buche</div></div><button class="btn" id="linkBtn">Apri</button></div>
   <div class="row"><div class="grow"><b>Vista della mappa</b><div class="hint" id="styleState">Foto</div></div><button class="btn" id="btnStyle">Cambia</button></div>
   <div class="row"><div class="grow"><b>Foto aerea</b><div class="hint" id="imgState">Satellite</div></div><button class="btn" id="imgBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Scarica la mappa del campo</b><div class="hint" id="dlState">Così funziona anche dove non c'è segnale</div></div><button class="btn" id="dlBtn">Scarica</button></div>
@@ -290,6 +291,18 @@ table.score tr{cursor:pointer}
   <p><a class="btn" id="cVideo" target="_blank" rel="noopener" hidden>▶ Guarda il video della buca</a> <button class="btn" id="cSwitch" hidden></button></p>
   <div class="b2"><button class="btn" id="cPrev">‹ Buca prima</button><button class="btn" id="cNext">Buca dopo ›</button></div>
   <p class="hint" id="cSrc"></p>
+</div></div>
+
+<div class="sheet" id="sLink" hidden><div>
+  <button class="close" data-close>×</button>
+  <h2>Schede da un link</h2>
+  <p class="sub">Prima di andare su un campo nuovo: apri il sito del circolo, copia il link della pagina del percorso (quella con le buche) e incollalo qui.</p>
+  <input id="linkUrl" placeholder="https://www.sitodelcircolo.it/percorso" autocomplete="off" inputmode="url">
+  <p class="hint" id="linkFor"></p>
+  <button class="btn" id="linkGo" style="width:100%;margin-top:8px">Carica</button>
+  <p class="hint" style="margin-top:12px">Si apre GitHub con la richiesta già scritta: tocchi <b>Submit new issue</b> (o "Crea"). In 2-3 minuti le schede sono pronte e GitHub ti risponde nella stessa pagina. Poi torni qui e tocchi Aggiorna.</p>
+  <button class="btn" id="linkRefresh" style="width:100%">Aggiorna le schede</button>
+  <p class="hint" id="linkState"></p>
 </div></div>
 
 <div class="sheet" id="sGes" hidden><div>
@@ -597,6 +610,7 @@ function findCard(c){
   const list=S.cards&&S.cards.circoli; if(!list||!c) return null;
   const forced=store.get('cardmap.'+c.id,null);
   if(forced){ const f=list.find(x=>x.key===forced); if(f) return f; }
+  const byOsm=list.find(x=>x.osm&&x.osm===c.id); if(byOsm) return byOsm;
   if(c.ges){ const byGes=list.find(x=>x.ges===c.ges.id); if(byGes) return byGes; }
   let best=null, bs=0; list.forEach(x=>{ const sc=gesScore({name:x.nome},c.name); if(sc>bs){bs=sc;best=x;} });
   return bs>=0.5 ? best : null;
@@ -652,6 +666,21 @@ function cardLive(){
   box.innerHTML=html;
 }
 $('#btnCard').onclick=()=>openCard();
+$('#linkBtn').onclick=()=>{ $('#linkFor').textContent=S.course?'Le schede verranno collegate al campo: '+S.course.name:'Scegli prima il campo sulla mappa, così le schede si collegano a quello.'; $('#linkState').textContent=''; openSheet('#sLink'); };
+$('#linkGo').onclick=()=>{
+  let u=$('#linkUrl').value.trim(); const m=u.match(/https?:\/\/\S+/)||(/^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(u)?['https://'+u]:null);
+  if(!m){ toast('Incolla un link che inizia con https://'); return; }
+  const body='Link: '+m[0]+'\n'+(S.course?'campo: '+S.course.name+'\nosm: '+S.course.id+'\n':'')+'\n(richiesta fatta dall\'app Caddie Mirko)';
+  window.open('https://github.com/mirkosterlini-sketch/golf/issues/new?title='+encodeURIComponent('Schede: '+m[0])+'&body='+encodeURIComponent(body),'_blank');
+  $('#linkState').textContent='Richiesta pronta su GitHub: tocca "Submit new issue". Poi fra 2-3 minuti tocca Aggiorna.';
+};
+$('#linkRefresh').onclick=async()=>{
+  $('#linkState').textContent='Aggiorno…';
+  try{ const r=await timeoutFetch('data/schede.json?t='+Date.now(),{cache:'no-store'},15000); const j=await r.json(); S.cards=j; store.set('cards',j);
+    if(S.course){ S.course.card=findCard(S.course); updateCardBtn(); }
+    $('#linkState').textContent=S.course&&S.course.card?'Fatto: le schede di '+S.course.card.nome+' sono pronte (pulsante Scheda in alto).':'Aggiornato. Per questo campo non ci sono ancora schede: se hai appena fatto la richiesta aspetta ancora un minuto.';
+  }catch(e){ $('#linkState').textContent='Non riesco ad aggiornare: controlla la connessione.'; }
+};
 $('#cImgBox').onclick=()=>$('#cImgBox').classList.toggle('zoom');
 $('#cImg').onerror=()=>{ $('#cImgHint').textContent='Foto non disponibile adesso (la prima volta serve la rete)'; };
 $('#cPrev').onclick=()=>openCard(cardN-1);
