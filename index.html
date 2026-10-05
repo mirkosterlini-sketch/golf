@@ -31,6 +31,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--flag);outline-o
 .num{font-family:var(--num);font-variant-numeric:tabular-nums}
 #map{position:fixed;inset:0;background:#203028}
 #map.drawn{background:var(--rough)}
+#raceTag{font:700 12px var(--txt);letter-spacing:.06em;background:var(--warn);color:#fff;border-radius:6px;padding:2px 6px}
+body.race #plays, body.race #iElevW, body.race #gSlope, body.race #gMeasure{display:none!important}
 .leaflet-control-attribution{font-size:9px;background:rgba(15,31,23,.6)!important;color:#cfd!important}
 .leaflet-control-attribution a{color:#cfd!important}
 .leaflet-tooltip{background:var(--ink);color:var(--paper);border:1px solid var(--line);font-weight:600}
@@ -142,7 +144,7 @@ table.score tr{cursor:pointer}
   <button class="iconbtn" id="prevHole" aria-label="Buca precedente">‹</button>
   <div class="course">
     <div id="courseName">Cerco la tua posizione…</div>
-    <div id="holeLine"><span id="holeNum" class="num">—</span><span id="holePar" class="num"></span></div>
+    <div id="holeLine"><span id="holeNum" class="num">—</span><span id="holePar" class="num"></span><span id="raceTag" hidden>GARA</span></div>
   </div>
   <button class="iconbtn" id="nextHole" aria-label="Buca successiva">›</button>
   <button class="iconbtn" id="btnStyle" aria-label="Cambia vista: satellite o disegno" style="font-size:12px;font-weight:700;line-height:1.1">Dise-<br>gno</button>
@@ -166,7 +168,7 @@ table.score tr{cursor:pointer}
   <div id="plays">Gioca come <b id="iPlays" class="num">—</b> · <b id="iClub" style="font-size:17px">—</b><span id="brk"></span></div>
   <div id="info">
     <span>Vento <b id="iWind">—</b></span>
-    <span>Green <b id="iElev" class="num">—</b></span>
+    <span id="iElevW">Green <b id="iElev" class="num">—</b></span>
     <span><b id="iTemp">—</b></span>
     <span id="iRainW" hidden>Pioggia <b id="iRain">—</b></span>
     <span id="iShotWrap" hidden>Ultimo colpo <b id="iShot" class="num">—</b></span>
@@ -241,6 +243,7 @@ table.score tr{cursor:pointer}
 <div class="sheet" id="sMore" hidden><div>
   <button class="close" data-close>×</button>
   <h2>Altro</h2>
+  <div class="row"><div class="grow"><b>Modalità gara</b><div class="hint" id="raceState">Spenta: vedi tutte le informazioni</div></div><button class="btn" id="raceBtn">Attiva</button></div>
   <div class="row"><div class="grow"><b>Cartellino ufficiale</b><div class="hint" id="gesState">Par, HCP e lunghezze da GesGolf</div></div><button class="btn" id="gesBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Disegna o correggi questa buca</b><div class="hint">Tocchi tee e green sulla foto satellitare</div></div><button class="btn" id="drawBtn">Disegna</button></div>
   <div class="row"><div class="grow"><b>Impara mentre giochi</b><div class="hint" id="learnState">Salva da solo green e tee che mancano sulla mappa</div></div><button class="btn" id="learnBtn">Attivo</button></div>
@@ -364,7 +367,7 @@ const S = {
   course:null, hole:0, me:null, acc:null, sim:false, target:null, mode:null, view:'hole',
   wx:null, elev:{}, clubs:(c=>!c||JSON.stringify(c)===OLD_DEFAULT?DEFAULT_CLUBS:c)(store.get('clubs',null)), phcp:store.get('phcp',20),
   round:store.get('round',null), slopes:{}, watch:false, lastShot:null, near:[], scoreHole:0,
-  index:store.get('index',19.4), style:store.get('style','sat'), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
+  index:store.get('index',19.4), race:store.get('race',false), style:store.get('style','sat'), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
 };
 if(!S.round || S.round.date!==today()) S.round=null;
 function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}}; store.set('round',S.round); }
@@ -830,7 +833,7 @@ function enterGreenView(){
   const ext=greenExtent(h), depth=Math.round(ext.back+ext.front), width=Math.round(ext.left+ext.right);
   $('#gTitle').textContent= h.greenEst ? `Green buca ${h.ref} · forma stimata (non disegnato sulla mappa)` : `Green buca ${h.ref} · profondo ${depth} m · largo ${width} m`;
   const pp=pinPos(), c=centroid(h.green);
-  let s=slopeText()||'Pendenza non ancora segnata';
+  let s=S.race?'Modalità gara: pendenze nascoste':(slopeText()||'Pendenza non ancora segnata');
   if(S.round.pins[holeKey()]){ const into=Math.round(ext.front + (proj(c).to(pp)[0]*Math.sin(rad(ext.ax))+proj(c).to(pp)[1]*Math.cos(rad(ext.ax))));
     s=`Bandiera a ${into} m dall'ingresso · `+s; }
   $('#gSub').textContent=s;
@@ -852,7 +855,7 @@ function slopeKey(){ const h=curHole(); return h&&h.green ? centroid(h.green).ma
 function measuredMean(s){ if(!s||!s.pts||!s.pts.length) return null; let e=0,n=0; s.pts.forEach(q=>{e+=q.e;n+=q.n;}); e/=s.pts.length; n/=s.pts.length; return {e,n,pct:Math.hypot(e,n),brg:(deg(Math.atan2(e,n))+360)%360}; }
 const SECT=['verso il fondo','verso il fondo a destra','verso destra','verso di te, a destra','verso di te','verso di te, a sinistra','verso sinistra','verso il fondo a sinistra'];
 const pctTxt=v=>v.toFixed(1).replace('.',',')+'%';
-function slopeText(){ const k=slopeKey(); const s=k&&S.slopes[k];
+function slopeText(){ if(S.race) return ''; const k=slopeKey(); const s=k&&S.slopes[k];
   const m=measuredMean(s);
   if(m){ const rel=((m.brg-greenAxis(curHole()))%360+360)%360; const many=s.pts.length>1?` (media di ${s.pts.length} punti)`:'';
     return m.pct<0.5 ? 'Green quasi in piano'+many : `Scende ${SECT[Math.round(rel/45)%8]}, ${pctTxt(m.pct)}${many}`+(s.note?' · '+s.note:''); }
@@ -861,6 +864,7 @@ function slopeText(){ const k=slopeKey(); const s=k&&S.slopes[k];
   return `Scende ${names[s.rel]} (${STRENGTH.find(x=>x[1]===s.str)[0]})`+(s.note?' · '+s.note:''); }
 function drawSlopeField(){
   layers.green.clearLayers();
+  if(S.race) return;
   const h0=curHole(), k0=slopeKey(), s0=k0&&S.slopes[k0];
   if(h0&&h0.green&&s0&&s0.pts&&s0.pts.length){ // misure vere: frecce interpolate su tutto il green + valori nei punti misurati
     const c=centroid(h0.green), P=proj(c), q=h0.green.map(P.to), pts=s0.pts.map(x=>({...x, xy:P.to(x.p)}));
@@ -886,6 +890,7 @@ function drawSlopeField(){
   }
 }
 function openSlope(){
+  if(S.race){ toast('In modalità gara le pendenze sono nascoste'); return; }
   const h=curHole(); if(!h||!h.green){ toast('Questo green non è disegnato sulla mappa'); return; }
   const k=slopeKey(), cur=S.slopes[k]||{rel:null,str:2,note:''};
   let rel=cur.rel, str=cur.str;
@@ -938,6 +943,7 @@ function liveLevel(){
   else $('#mState').textContent='Pronto: premi Misura qui';
 }
 async function openMeasure(){
+  if(S.race){ toast('In modalità gara la livella è spenta'); return; }
   const h=curHole(); if(!h||!h.green){ toast('Questo green non è disegnato sulla mappa'); return; }
   try{ if(typeof DeviceMotionEvent!=='undefined' && DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission();
        if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); }catch(e){}
@@ -1006,6 +1012,8 @@ function windText(parts){ if(!S.wx) return '—';
   return main+' km/h'+(S.wx.gust-S.wx.speed>8?' (raffiche '+Math.round(S.wx.gust)+')':''); }
 // freccia che indica dove soffia il vento: in alto = verso la bandiera (con la bandiera davanti a te)
 const windArrow=r=>S.wx?`<span style="display:inline-block;transform:rotate(${Math.round(r)}deg);margin-right:3px">↑</span>`:'';
+const CARD=['N','NE','E','SE','S','SO','O','NO'];
+function windForecast(){ return S.wx ? `da ${CARD[Math.round(S.wx.dir/45)%8]} ${Math.round(S.wx.speed)} km/h (previsione)` : '—'; }
 const sgn=v=>(v>0?'+':v<0?'−':'±')+Math.abs(Math.round(v));
 
 /* ============ distanze ============ */
@@ -1033,7 +1041,7 @@ function update(){
     const bits=[]; if(p.dh!=null && Math.abs(p.dh)>=1) bits.push('dislivello '+sgn(p.dh));
     if(Math.abs(p.wind)>=1) bits.push('vento '+sgn(p.wind)); if(Math.abs(p.temp)>=1) bits.push('temperatura '+sgn(p.temp));
     $('#brk').textContent=bits.join(' · ');
-    $('#iWind').innerHTML=windArrow((S.wx?S.wx.dir+180:0)-bearing(me,pp))+esc(windText(p));
+    $('#iWind').innerHTML= S.race ? windForecast() : windArrow((S.wx?S.wx.dir+180:0)-bearing(me,pp))+esc(windText(p));
     $('#iElev').textContent = p.dh==null ? '—' : Math.abs(p.dh)<1 ? 'in piano' : (p.dh>0?Math.round(p.dh)+' m più alto':Math.round(-p.dh)+' m più basso');
   } else {
     $('#iPlays').textContent='—'; $('#iClub').textContent='—'; $('#brk').textContent=far?'Sei lontano dal campo':''; $('#iElev').textContent='—';
@@ -1127,7 +1135,7 @@ const FAVS=['Rapallo','Rovedine','Pinetina','Arenzano'];
 function renderFavs(){
   const box=$('#favs'); box.innerHTML='';
   const saved=store.get('saved',[]);
-  saved.forEach(s=>{ const b=document.createElement('button'); b.className='chip on'; b.textContent=s.name;
+  saved.forEach(s=>{ const b=document.createElement('button'); b.className='chip on'; b.textContent=s.name+(store.get('dl.'+s.id,null)?' · senza rete ✓':'');
     b.onclick=()=>{ const d=store.get('course.'+s.id,null); if(d){ closeSheets(); layers.courses.clearLayers(); buildCourse(d); } }; box.appendChild(b); });
   FAVS.filter(n=>!saved.some(s=>s.name.toLowerCase().includes(n.toLowerCase()))).forEach(n=>{
     const b=document.createElement('button'); b.className='chip'; b.textContent=n; b.onclick=()=>doSearch(n); box.appendChild(b); });
@@ -1215,21 +1223,45 @@ $('#clubsSave').onclick=()=>{ S.clubs=S.clubs.map((c,i)=>[c[0], parseInt($('#clu
 /* ============ mappa senza rete ============ */
 function tilesFor(b, z){ const t=(lat,lon)=>{ const n=2**z, x=Math.floor((lon+180)/360*n), y=Math.floor((1-Math.log(Math.tan(rad(lat))+1/Math.cos(rad(lat)))/Math.PI)/2*n); return [x,y]; };
   const a=t(b[1][0],b[0][1]), c=t(b[0][0],b[1][1]), out=[]; for(let x=a[0];x<=c[0];x++) for(let y=a[1];y<=c[1];y++) out.push([z,x,y]); return out; }
+// Gli indirizzi delle foto devono essere identici a quelli che usa la mappa, altrimenti la copia salvata non viene trovata:
+// li faccio generare allo stesso strato su una mappa nascosta.
+let dlMap=null;
+function tileUrlsFor(layerMaker, z0, z1){
+  if(!dlMap){ const d=document.createElement('div'); d.style.cssText='position:absolute;left:-9999px;width:256px;height:256px'; document.body.appendChild(d); dlMap=L.map(d,{zoomControl:false,attributionControl:false}).setView([44,9],15); }
+  const lay=layerMaker(); lay.addTo(dlMap); const urls=[];
+  for(let z=z0;z<=z1;z++){ lay._tileZoom=z; for(const [zz,x,y] of tilesFor(S.course.bounds,z)){ const c=L.point(x,y); c.z=zz; urls.push(lay.getTileUrl(c)); } }
+  dlMap.removeLayer(lay); return urls;
+}
+function dlInfo(){ return S.course ? store.get('dl.'+S.course.id,null) : null; }
+function showDlState(){
+  const d=dlInfo(); if(!S.course){ $('#dlState').textContent='Così funziona anche dove non c\'è segnale'; return; }
+  $('#dlState').textContent = d ? `${S.course.name}: salvata il ${new Date(d.date).toLocaleDateString('it-IT')} (${d.n.toLocaleString('it-IT')} immagini). Funziona anche senza segnale` : `${S.course.name}: non ancora salvata. Così funziona anche dove non c'è segnale`;
+  $('#dlBtn').textContent = d ? 'Riscarica' : 'Scarica';
+}
 async function downloadTiles(){
   if(!S.course){ toast('Carica prima un campo'); return; }
-  let list=[]; for(let z=15;z<=19;z++) list=list.concat(tilesFor(S.course.bounds,z));
-  if(list.length>4000){ toast('Il campo è troppo grande da scaricare tutto'); return; }
-  let done=0; $('#dlBtn').disabled=true;
-  const work=list.slice(), run=async()=>{ while(work.length){ const [z,x,y]=work.pop();
-    try{ await fetch(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,{mode:'no-cors'}); }catch(e){}
-    done++; if(done%20===0||done===list.length) $('#dlState').textContent=`Scaricate ${done} di ${list.length} immagini`; } };
-  await Promise.all([run(),run(),run(),run()]);
-  $('#dlBtn').disabled=false; $('#dlState').textContent='Mappa salvata sul telefono'; toast('Mappa del campo salvata');
+  const reg=REGION_IMG[S.course.region], useReg=reg && store.get('img','auto')!=='esri';
+  let urls=tileUrlsFor(()=>L.tileLayer(ESRI._url,{maxNativeZoom:19}), 15, 19);
+  if(useReg) urls=urls.concat(tileUrlsFor(reg.make, 15, 20));
+  urls=[...new Set(urls)];
+  if(urls.length>8000){ toast('Il campo è troppo grande da scaricare tutto'); return; }
+  // salva anche l'app e i cartellini, così si apre senza rete
+  ['./', 'data/gesgolf.json', 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js','https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'].forEach(u=>fetch(u).catch(()=>{}));
+  let done=0, fail=0; $('#dlBtn').disabled=true;
+  const work=urls.slice(), run=async()=>{ while(work.length){ const u=work.pop();
+    try{ await fetch(u,{mode:'no-cors'}); }catch(e){ fail++; }
+    done++; if(done%25===0||done===urls.length) $('#dlState').textContent=`Scarico ${done} di ${urls.length} immagini…`; } };
+  await Promise.all([run(),run(),run(),run(),run(),run()]);
+  $('#dlBtn').disabled=false;
+  if(fail>urls.length*0.2){ toast('Download incompleto: controlla la connessione e riprova'); showDlState(); return; }
+  store.set('dl.'+S.course.id,{n:urls.length-fail, date:Date.now()});
+  showDlState(); renderFavs();
+  toast('Mappa di '+S.course.name+' salvata sul telefono');
 }
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=4',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=5',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
 async function toggleWatch(){
   if(S.watch){ S.watch=false; $('#watchBtn').textContent='Attiva'; $('#watchState').textContent='Spento';
     if(swReg){ (await swReg.getNotifications({tag:'golf'})).forEach(n=>n.close()); } releaseWake(); return; }
@@ -1248,7 +1280,7 @@ function pushWatch(front,pin,back){
   const h=curHole(); if(!h) return;
   const pp=pinPos();
   let body=`⛳ ${fmt(pin)} m   ▲${fmt(front)}  ▼${fmt(back)}`;
-  if(S.me&&pp){ const pl=playsLike(S.me,pp); body+=`\nGioca ${pl.plays} m · ${clubFor(pl.plays)}`;
+  if(S.me&&pp&&!S.race){ const pl=playsLike(S.me,pp); body+=`\nGioca ${pl.plays} m · ${clubFor(pl.plays)}`;
     if(S.wx) body+=`\nVento ${windText(pl.parts)}`;
     if(pl.parts.dh!=null && Math.abs(pl.parts.dh)>=2) body+=` · green ${sgn(pl.parts.dh)} m`; }
   const sl=slopeText(); if(sl) body+=`\n${sl}`;
@@ -1266,9 +1298,18 @@ $('#tFlag').onclick=openFlag;
 $('#tGreen').onclick=()=>{ if(S.view==='green') exitGreenView(true); else enterGreenView(); };
 $('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; } S.lastShot=S.me.slice(); $('#iShotWrap').hidden=false; update(); toast('Colpo segnato: cammina fino alla palla'); };
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
-$('#tMore').onclick=()=>openSheet('#sMore');
+$('#tMore').onclick=()=>{ showDlState(); openSheet('#sMore'); };
 $('#openHaz').onclick=openHaz;
 $('#btnStyle').onclick=()=>{ S.style=S.style==='map'?'sat':'map'; store.set('style',S.style); applyStyle(); toast(S.style==='map'?'Vista disegno':'Vista satellite'); };
+function applyRace(){
+  document.body.classList.toggle('race',S.race); $('#raceTag').hidden=!S.race;
+  $('#raceBtn').textContent=S.race?'Spegni':'Attiva'; $('#raceBtn').classList.toggle('main',S.race);
+  $('#raceState').textContent=S.race?'Attiva: solo distanze, ostacoli, cartellino e segnapunti (Regola 4.3)':'Spenta: vedi tutte le informazioni';
+  if(S.view==='green') enterGreenView(); else if(S.course) showHole(false);
+  lastPush=''; update();
+}
+$('#raceBtn').onclick=()=>{ S.race=!S.race; store.set('race',S.race); applyRace();
+  toast(S.race?'Modalità gara attiva: nascoste pendenze, gioca come, bastone e vento sul tiro':'Modalità gara spenta'); };
 $('#imgBtn').onclick=()=>{ const cur=store.get('img','auto'); store.set('img',cur==='esri'?'auto':'esri'); setImagery(S.course&&S.course.region); };
 $('#gesBtn').onclick=()=>{ if(!S.course){ toast('Carica prima un campo'); return; } openGes(); };
 $('#drawBtn').onclick=startDraw;
@@ -1291,6 +1332,7 @@ $('#reloadCourse').onclick=async()=>{ closeSheets(); if(!S.course||!S.course.src
 /* ============ avvio ============ */
 renderFavs();
 applyStyle();
+applyRace();
 startGps();
 setTimeout(()=>{ if(!S.me) noFix(); }, 9000);
 </script>
