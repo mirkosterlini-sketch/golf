@@ -20,6 +20,7 @@
   --flag:#ffd23f; --green:#7ed957; --water:#5ab4ff; --sand:#e8c98a; --warn:#ff7a59;
   --num:"Barlow Condensed","Roboto Condensed","Arial Narrow",system-ui,sans-serif;
   --txt:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --rough:#3f7a35; --fairway:#79bf55; --greenfill:#a6e67f; --teefill:#8fd46b; --sandfill:#ecd9a0; --waterfill:#4aa3df;
   color-scheme:dark;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -29,6 +30,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:2px solid var(--flag);outline-offset:2px}
 .num{font-family:var(--num);font-variant-numeric:tabular-nums}
 #map{position:fixed;inset:0;background:#203028}
+#map.drawn{background:var(--rough)}
 .leaflet-control-attribution{font-size:9px;background:rgba(15,31,23,.6)!important;color:#cfd!important}
 .leaflet-control-attribution a{color:#cfd!important}
 .leaflet-tooltip{background:var(--ink);color:var(--paper);border:1px solid var(--line);font-weight:600}
@@ -143,6 +145,7 @@ table.score tr{cursor:pointer}
     <div id="holeLine"><span id="holeNum" class="num">—</span><span id="holePar" class="num"></span></div>
   </div>
   <button class="iconbtn" id="nextHole" aria-label="Buca successiva">›</button>
+  <button class="iconbtn" id="btnStyle" aria-label="Cambia vista: satellite o disegno" style="font-size:12px;font-weight:700;line-height:1.1">Dise-<br>gno</button>
   <button class="iconbtn" id="btnCourse" aria-label="Scegli campo">⛳</button>
 </header>
 
@@ -361,7 +364,7 @@ const S = {
   course:null, hole:0, me:null, acc:null, sim:false, target:null, mode:null, view:'hole',
   wx:null, elev:{}, clubs:(c=>!c||JSON.stringify(c)===OLD_DEFAULT?DEFAULT_CLUBS:c)(store.get('clubs',null)), phcp:store.get('phcp',20),
   round:store.get('round',null), slopes:{}, watch:false, lastShot:null, near:[], scoreHole:0,
-  index:store.get('index',19.4), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
+  index:store.get('index',19.4), style:store.get('style','sat'), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
 };
 if(!S.round || S.round.date!==today()) S.round=null;
 function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}}; store.set('round',S.round); }
@@ -386,8 +389,8 @@ function hiRes(){ return !!regLayer; }
 function setImagery(region){
   if(regLayer){ map.removeLayer(regLayer); regLayer=null; }
   const pref=store.get('img','auto'), r=REGION_IMG[region];
-  if(r && pref!=='esri'){ regLayer=r.make().addTo(map); map.setMaxZoom(21); $('#imgState').textContent=r.name+' (nitida)'; }
-  else { map.setMaxZoom(20); $('#imgState').textContent='Satellite'+(r?' (c\'è anche la '+r.name+')':''); }
+  if(r && pref!=='esri'){ regLayer=r.make(); if(S.style!=='map') regLayer.addTo(map); map.setMaxZoom(21); $('#imgState').textContent=r.name+' (nitida)'; }
+  else { map.setMaxZoom(S.style==='map'?21:20); $('#imgState').textContent='Satellite'+(r?' (c\'è anche la '+r.name+')':''); }
 }
 async function regionOf(data){
   if(data.region!==undefined) return data.region;
@@ -481,10 +484,12 @@ async function loadCourse(el, force=false){
   buildCourse(data);
 }
 function buildCourse(data){
-  const greens=[], hazards=[], osmHoles=[];
+  const greens=[], hazards=[], osmHoles=[], fairways=[], tees=[];
   for(const e of data.els){
     const g=e.g, geo=e.geo;
     if(g==='green') greens.push(geo);
+    else if(g==='fairway') fairways.push(geo);
+    else if(g==='tee') tees.push(geo);
     else if(g==='bunker') hazards.push({type:'sand',poly:geo});
     else if(g==='water_hazard'||g==='lateral_water_hazard'||e.w) hazards.push({type:'water',poly:geo});
     else if(g==='hole' && e.k==='way'){
@@ -494,7 +499,7 @@ function buildCourse(data){
   for(const h of osmHoles){ const end=h.line[h.line.length-1]; let best=null, bd=Infinity;
     for(const g of greens){ const d=minDistPoly(end,g); if(d<bd){bd=d;best=g;} }
     if(bd<60) h.green=best; }
-  S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, greens, hazards, osmHoles, holes:[]};
+  S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, greens, hazards, osmHoles, fairways, tees, holes:[]};
   regionOf(data).then(rg=>{ if(S.course&&S.course.id===data.id){ S.course.region=rg; setImagery(rg); } });
   S.course.ges=findGes(S.course);
   rebuildHoles();
@@ -582,10 +587,30 @@ function openGes(){
 }
 function drawCourse(){
   layers.course.clearLayers();
-  const c=S.course;
-  c.greens.forEach(g=>L.polygon(g,{color:'#7ed957',weight:1.5,fillOpacity:.12,interactive:false}).addTo(layers.course));
-  c.hazards.forEach(h=>L.polygon(h.poly,{color:h.type==='water'?'#5ab4ff':'#e8c98a',weight:1,fillOpacity:.08,interactive:false}).addTo(layers.course));
+  const c=S.course; if(!c) return;
+  if(S.style==='map'){ // disegno del campo: forme piene colorate
+    const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const fill=(poly,col,stroke,w=1)=>L.polygon(poly,{color:stroke||col,weight:w,fillColor:col,fillOpacity:1,interactive:false}).addTo(layers.course);
+    c.fairways.forEach(f=>fill(f,css('--fairway'),'#5fa043'));
+    c.tees.forEach(t=>fill(t,css('--teefill'),'#6fb04f'));
+    c.hazards.filter(h=>h.type==='water').forEach(h=>fill(h.poly,css('--waterfill'),'#2f86c4'));
+    c.greens.forEach(g=>fill(g,css('--greenfill'),'#ffffff',1.5));
+    c.hazards.filter(h=>h.type==='sand').forEach(h=>fill(h.poly,css('--sandfill'),'#c9b57c'));
+    c.holes.forEach(h=>{ if(h.greenEst&&h.green) fill(h.green,css('--greenfill'),'#ffffff',1); // green stimato, comunque disegnato
+      if(h.tee) L.marker(h.tee,{icon:divIcon(`<div class="lbl s">${h.ref}</div>`,null,[8,10]),interactive:false}).addTo(layers.course); });
+  } else {
+    c.greens.forEach(g=>L.polygon(g,{color:'#7ed957',weight:1.5,fillOpacity:.12,interactive:false}).addTo(layers.course));
+    c.hazards.forEach(h=>L.polygon(h.poly,{color:h.type==='water'?'#5ab4ff':'#e8c98a',weight:1,fillOpacity:.08,interactive:false}).addTo(layers.course));
+  }
   $('#courseName').textContent=c.name;
+}
+function applyStyle(){
+  const drawn=S.style==='map';
+  $('#map').classList.toggle('drawn',drawn);
+  if(drawn){ map.removeLayer(ESRI); if(regLayer) map.removeLayer(regLayer); map.setMaxZoom(21); }
+  else { if(!map.hasLayer(ESRI)) ESRI.addTo(map); if(regLayer){ regLayer.addTo(map); map.setMaxZoom(21); } else map.setMaxZoom(20); }
+  $('#btnStyle').innerHTML = drawn ? 'Foto' : 'Dise-<br>gno';
+  drawCourse(); if(S.course) showHole(false);
 }
 
 /* ============ campi vicini ============ */
@@ -1243,6 +1268,7 @@ $('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; 
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
 $('#tMore').onclick=()=>openSheet('#sMore');
 $('#openHaz').onclick=openHaz;
+$('#btnStyle').onclick=()=>{ S.style=S.style==='map'?'sat':'map'; store.set('style',S.style); applyStyle(); toast(S.style==='map'?'Vista disegno':'Vista satellite'); };
 $('#imgBtn').onclick=()=>{ const cur=store.get('img','auto'); store.set('img',cur==='esri'?'auto':'esri'); setImagery(S.course&&S.course.region); };
 $('#gesBtn').onclick=()=>{ if(!S.course){ toast('Carica prima un campo'); return; } openGes(); };
 $('#drawBtn').onclick=startDraw;
@@ -1264,6 +1290,7 @@ $('#reloadCourse').onclick=async()=>{ closeSheets(); if(!S.course||!S.course.src
 
 /* ============ avvio ============ */
 renderFavs();
+applyStyle();
 startGps();
 setTimeout(()=>{ if(!S.me) noFix(); }, 9000);
 </script>
