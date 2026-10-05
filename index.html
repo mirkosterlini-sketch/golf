@@ -1255,7 +1255,8 @@ function showDlState(){
 async function downloadTiles(){
   if(!S.course){ toast('Carica prima un campo'); return; }
   const reg=REGION_IMG[S.course.region], useReg=reg && store.get('img','auto')!=='esri';
-  let urls=tileUrlsFor(()=>L.tileLayer(ESRI._url,{maxNativeZoom:19}), 15, 19);
+  // con la foto della Regione non serve anche il satellite sotto: si scarica solo una delle due
+  let urls=useReg ? [] : tileUrlsFor(()=>L.tileLayer(ESRI._url,{maxNativeZoom:19}), 15, 19);
   if(useReg){ // foto della Regione: tutto il campo fino al livello 19, il massimo dettaglio (20) solo attorno a green e tee
     urls=urls.concat(tileUrlsFor(reg.make, 15, 19));
     const near=[...S.course.holes.flatMap(h=>[h.green&&centroid(h.green), h.tee]), ...S.course.greens.map(centroid)].filter(Boolean)
@@ -1268,7 +1269,7 @@ async function downloadTiles(){
   let done=0, fail=0; $('#dlBtn').disabled=true;
   const work=urls.slice(), run=async()=>{ while(work.length){ const u=work.pop();
     try{ await fetch(u,{mode:'no-cors'}); }catch(e){ fail++; }
-    done++; if(done%25===0||done===urls.length) $('#dlState').textContent=`Scarico ${done} di ${urls.length} immagini…`; } };
+    done++; if(done%25===0||done===urls.length) $('#dlState').textContent=`Scarico ${done} di ${urls.length} immagini… (qualche minuto: tieni l'app aperta)`; } };
   await Promise.all([run(),run(),run(),run(),run(),run()]);
   $('#dlBtn').disabled=false;
   if(fail>urls.length*0.2){ toast('Download incompleto: controlla la connessione e riprova'); showDlState(); return; }
