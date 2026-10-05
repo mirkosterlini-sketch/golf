@@ -67,7 +67,7 @@ export function extractHoles(html, base) {
     t = t.replace(/\b(Overwiev|Overview|Video|Immagini|Consigli|DETTAGLI|Dettagli|GUARDA IL VIDEO SU YOUTUBE|TORNA ALLA PAGINA PERCORSO|Torna al menu|Leggi di più|Scopri di più|Sponsored by)\b/gi, ' ')
       .replace(/(Questo sito|Questo sito web|Utilizziamo i cookie|cookie policy|Privacy policy)[\s\S]*$/i, '')
       .replace(/\b(Salta al contenuto|Vai al contenuto|Skip to content|View Larger Image|Previous|Next|Precedente|Successiva|Tutte le buche|Sponsor Available for sponsorship|Available for sponsorship|Facebook|Instagram|Twitter|LinkedIn|Condividi|Share)\b/gi, ' ')
-      .replace(/(?:\b\d{1,2}\s+){6,}\d{1,2}\b/g, ' ').replace(/[☰×]/g, ' ').replace(/^[\s—–\-|:.,]+/, '').replace(/\s+/g, ' ').trim();
+      .replace(/(?:\b\d{1,2}\s+){6,}\d{1,2}\b/g, ' ').replace(/\b\d{4}-\d\d-\d\dT[\d:+]+/g, ' ').replace(/^Sponsor\b.*$/i, '').replace(/[☰×]/g, ' ').replace(/^[\s—–\-|:.,]+/, '').replace(/\s+/g, ' ').trim();
     const named = h.imgs.find(i => i.byName), img = (named || h.imgs[0] || {}).u;
     const b = { n: h.n };
     if (par) b.par = +par; if (hcp && +hcp <= 18) b.hcp = +hcp;
