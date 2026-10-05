@@ -1,0 +1,596 @@
+[
+{
+"ges": 6,
+"nome": "BIELLA BETULLE",
+"regione": "Piemonte",
+"url": "https://www.golfclubbiella.it/"
+},
+{
+"ges": 7,
+"nome": "BOGLIACO",
+"regione": "Lombardia",
+"url": "https://www.golfbogliaco.com/"
+},
+{
+"ges": 8,
+"nome": "BOLOGNA",
+"regione": "Emilia Romagna",
+"url": "https://www.golfclubbologna.it/"
+},
+{
+"ges": 11,
+"nome": "CARIMATE",
+"regione": "Lombardia",
+"url": "https://www.golfcarimate.it/"
+},
+{
+"ges": 13,
+"nome": "CLAVIERE",
+"regione": "Piemonte",
+"url": "https://www.golfclubclaviere.it/"
+},
+{
+"ges": 15,
+"nome": "FIRENZE UGOLINO",
+"regione": "Toscana",
+"url": "https://www.golfugolino.it/"
+},
+{
+"ges": 19,
+"nome": "LANZO",
+"regione": "Lombardia",
+"url": "https://www.golflanzo.it/"
+},
+{
+"ges": 22,
+"nome": "SERRA",
+"regione": "Piemonte",
+"url": "https://www.golflaserra.it/"
+},
+{
+"ges": 23,
+"nome": "FRONDE",
+"regione": "Piemonte",
+"url": "https://www.golflefronde.it/"
+},
+{
+"ges": 25,
+"nome": "MENAGGIO",
+"regione": "Lombardia",
+"url": "https://www.golfclubmenaggio.it/"
+},
+{
+"ges": 26,
+"nome": "MILANO",
+"regione": "Lombardia",
+"url": "https://www.golfclubmilano.com/"
+},
+{
+"ges": 27,
+"nome": "MONTICELLO",
+"regione": "Lombardia",
+"url": "https://www.golfclubmonticello.it/"
+},
+{
+"ges": 37,
+"nome": "SANREMO ULIVI",
+"regione": "Liguria",
+"url": "https://www.golfsanremo.com/"
+},
+{
+"ges": 39,
+"nome": "ALPINO",
+"regione": "Piemonte",
+"url": "https://www.golfalpino.it/"
+},
+{
+"ges": 42,
+"nome": "TORINO",
+"regione": "Piemonte",
+"url": "https://www.circologolftorino.it/"
+},
+{
+"ges": 45,
+"nome": "VARESE",
+"regione": "Lombardia",
+"url": "https://www.golfclubvarese.it/"
+},
+{
+"ges": 48,
+"nome": "VILLA D'ESTE",
+"regione": "Lombardia",
+"url": "https://www.golfvilladeste.com/"
+},
+{
+"ges": 56,
+"nome": "LECCO",
+"regione": "Lombardia",
+"url": "https://www.golfclublecco.it/"
+},
+{
+"ges": 59,
+"nome": "CHERASCO",
+"regione": "Piemonte",
+"url": "https://www.golfcherasco.com/"
+},
+{
+"ges": 60,
+"nome": "MOLINETTO",
+"regione": "Lombardia",
+"url": "https://www.molinettocountryclub.it/"
+},
+{
+"ges": 63,
+"nome": "ZOATE",
+"regione": "Lombardia",
+"url": "https://www.golfzoate.it/"
+},
+{
+"ges": 64,
+"nome": "PONTE LEGNO",
+"regione": "Lombardia",
+"url": "https://www.golfpontedilegno.it/"
+},
+{
+"ges": 67,
+"nome": "GARDAGOLF",
+"regione": "Lombardia",
+"url": "https://www.gardagolf.it/"
+},
+{
+"ges": 68,
+"nome": "CASTELCONTURBIA",
+"regione": "Piemonte",
+"url": "https://www.golfclubcastelconturbia.it/"
+},
+{
+"ges": 69,
+"nome": "FRANCIACORTA",
+"regione": "Lombardia",
+"url": "https://www.franciacortagolfclub.it/"
+},
+{
+"ges": 71,
+"nome": "MODENA",
+"regione": "Emilia Romagna",
+"url": "https://www.modenagolf.it/"
+},
+{
+"ges": 74,
+"nome": "CERVIA",
+"regione": "Emilia Romagna",
+"url": "https://www.golfcervia.com/"
+},
+{
+"ges": 85,
+"nome": "CASENTINO",
+"regione": "Toscana",
+"url": "https://www.golfclubcasentino.it/"
+},
+{
+"ges": 91,
+"nome": "MARGHERITA",
+"regione": "Piemonte",
+"url": "https://www.golfclublamargherita.it/"
+},
+{
+"ges": 102,
+"nome": "GREEN CLUB LAINATE",
+"regione": "Lombardia",
+"url": "https://www.greenclubgolf.it/"
+},
+{
+"ges": 117,
+"nome": "BRIANZA",
+"regione": "Lombardia",
+"url": "https://www.brianzagolf.it/"
+},
+{
+"ges": 133,
+"nome": "CUS FERRARA",
+"regione": "Emilia Romagna",
+"url": "https://www.cusferrara.it/"
+},
+{
+"ges": 135,
+"nome": "ARGENTA",
+"regione": "Emilia Romagna",
+"url": "https://www.argentagolf.it/"
+},
+{
+"ges": 150,
+"nome": "TORRAZZO - CREMONA",
+"regione": "Lombardia",
+"url": "https://www.golfiltorrazzo.it/"
+},
+{
+"ges": 153,
+"nome": "POGGIO MEDICI",
+"regione": "Toscana",
+"url": "https://www.marzocco-group.com/"
+},
+{
+"ges": 161,
+"nome": "GIRASOLI",
+"regione": "Piemonte",
+"url": "https://www.girasoligolf.it/"
+},
+{
+"ges": 166,
+"nome": "FAENZA CICOGNE",
+"regione": "Emilia Romagna",
+"url": "https://www.faenzagolf.com/"
+},
+{
+"ges": 172,
+"nome": "CASALUNGA",
+"regione": "Emilia Romagna",
+"url": "https://www.casalungagolf.it/"
+},
+{
+"ges": 182,
+"nome": "ROBINIE",
+"regione": "Lombardia",
+"url": "https://www.lerobinie.com/"
+},
+{
+"ges": 209,
+"nome": "CILIEGI",
+"regione": "Piemonte",
+"url": "https://www.iciliegigolfclub.it/"
+},
+{
+"ges": 285,
+"nome": "FONTI",
+"regione": "Emilia Romagna",
+"url": "https://www.golfclublefonti.it/"
+},
+{
+"ges": 289,
+"nome": "ARONA",
+"regione": "Piemonte",
+"url": "https://www.aronagolf.it/"
+},
+{
+"ges": 291,
+"nome": "TOSCANA",
+"regione": "Toscana",
+"url": "https://www.golfclubtoscana.com/"
+},
+{
+"ges": 300,
+"nome": "PARCO FIRENZE",
+"regione": "Toscana",
+"url": "https://www.parcodifirenze.it/"
+},
+{
+"ges": 308,
+"nome": "COLOMBARO",
+"regione": "Lombardia",
+"url": "https://www.ilcolombaro.com/"
+},
+{
+"ges": 340,
+"nome": "DRUENTO",
+"regione": "Piemonte",
+"url": "https://www.golfdruento.com/"
+},
+{
+"ges": 343,
+"nome": "BELLOSGUARDO",
+"regione": "Toscana",
+"url": "https://www.golfbellosguardovinci.it/"
+},
+{
+"ges": 348,
+"nome": "SAN VITO",
+"regione": "Lombardia",
+"url": "https://www.golfsanvito.it/"
+},
+{
+"ges": 365,
+"nome": "ARGENTARIO",
+"regione": "Toscana",
+"url": "https://www.argentariogolfclub.it/"
+},
+{
+"ges": 384,
+"nome": "ROYAL PARK ROVERI",
+"regione": "Piemonte",
+"url": "https://www.royalparkgolf.it/"
+},
+{
+"ges": 405,
+"nome": "PRIMULE",
+"regione": "Piemonte",
+"url": "https://www.golfleprimule.com/"
+},
+{
+"ges": 410,
+"nome": "PINEROLO - PRAGELATO",
+"regione": "Piemonte",
+"url": "https://www.golfpinerolo.it/"
+},
+{
+"ges": 412,
+"nome": "SATURNIA",
+"regione": "Toscana",
+"url": "https://www.termedisaturnia.it/"
+},
+{
+"ges": 434,
+"nome": "BORGO CAMUZZAGO",
+"regione": "Lombardia",
+"url": "https://www.camuzzagogolf.it/"
+},
+{
+"ges": 435,
+"nome": "TORRE RONCHI",
+"regione": "Piemonte",
+"url": "https://www.torredeironchi.com/"
+},
+{
+"ges": 441,
+"nome": "SAN VIGILIO",
+"regione": "Lombardia",
+"url": "https://www.gardahotelsanvigiliogolf.it/"
+},
+{
+"ges": 465,
+"nome": "MONCALIERI",
+"regione": "Piemonte",
+"url": "https://www.moncalierigolfclub.com/"
+},
+{
+"ges": 480,
+"nome": "DES ILES BORROMEES",
+"regione": "Piemonte",
+"url": "https://www.golfdesiles.it/"
+},
+{
+"ges": 483,
+"nome": "MOLINO PERO",
+"regione": "Emilia Romagna",
+"url": "https://www.golfmolinodelpero.it/"
+},
+{
+"ges": 504,
+"nome": "BAGNAIA",
+"regione": "Toscana",
+"url": "https://www.labagnaiagolfresort.com/"
+},
+{
+"ges": 634,
+"nome": "CASTELLARO",
+"regione": "Liguria",
+"url": "https://www.castellarogolf.it/"
+},
+{
+"ges": 638,
+"nome": "MONTELUPO",
+"regione": "Toscana",
+"url": "https://www.golfmontelupo.it/"
+},
+{
+"ges": 659,
+"nome": "BOGOGNO",
+"regione": "Piemonte",
+"url": "https://www.bogognogolfresort.com/"
+},
+{
+"ges": 660,
+"nome": "BOVES",
+"regione": "Piemonte",
+"url": "https://www.golfboves.com/"
+},
+{
+"ges": 669,
+"nome": "BARLASSINA",
+"regione": "Lombardia",
+"url": "https://www.barlassinacountryclub.it/"
+},
+{
+"ges": 670,
+"nome": "MONFERRATO",
+"regione": "Piemonte",
+"url": "https://www.golfclubmonferrato.it/"
+},
+{
+"ges": 672,
+"nome": "SALICE TERME",
+"regione": "Lombardia",
+"url": "https://www.golfsaliceterme.it/"
+},
+{
+"ges": 678,
+"nome": "CASTELFALFI",
+"regione": "Toscana",
+"url": "https://www.castelfalfi.com/"
+},
+{
+"ges": 681,
+"nome": "CAVAGLIA'",
+"regione": "Piemonte",
+"url": "https://www.golfclubcavaglia.it/"
+},
+{
+"ges": 698,
+"nome": "ROSSERA",
+"regione": "Lombardia",
+"url": "https://www.golfrossera.it/"
+},
+{
+"ges": 699,
+"nome": "AMBROSIANO",
+"regione": "Lombardia",
+"url": "https://www.golfclubambrosiano.com/"
+},
+{
+"ges": 700,
+"nome": "DUCATO",
+"regione": "Emilia Romagna",
+"url": "https://www.emiliagolf.it/"
+},
+{
+"ges": 701,
+"nome": "CAMPODOGLIO",
+"regione": "Lombardia",
+"url": "https://www.campodoglio.it/"
+},
+{
+"ges": 703,
+"nome": "PAVONIERE",
+"regione": "Toscana",
+"url": "https://www.pavoniere.it/"
+},
+{
+"ges": 706,
+"nome": "SALUZZO",
+"regione": "Piemonte",
+"url": "https://www.saluzzogolf.it/"
+},
+{
+"ges": 720,
+"nome": "MANTOVA",
+"regione": "Lombardia",
+"url": "https://www.mantovagolf.com/"
+},
+{
+"ges": 723,
+"nome": "RIMINI VERUCCHIO",
+"regione": "Emilia Romagna",
+"url": "https://www.riminiverucchiogolf.com/"
+},
+{
+"ges": 734,
+"nome": "MULINO CERRIONE",
+"regione": "Piemonte",
+"url": "https://www.golfclubcerrione.com/"
+},
+{
+"ges": 741,
+"nome": "CONTINENTAL VERBANIA",
+"regione": "Piemonte",
+"url": "https://www.golfcontinentalverbania.it/"
+},
+{
+"ges": 742,
+"nome": "COLLI BERGAMO",
+"regione": "Lombardia",
+"url": "https://www.aicollidibergamogolf.it/"
+},
+{
+"ges": 744,
+"nome": "ARZAGA",
+"regione": "Lombardia",
+"url": "https://www.arzagagolf.it/"
+},
+{
+"ges": 746,
+"nome": "ALBISOLA",
+"regione": "Liguria",
+"url": "https://www.golfclubalbisola.it/"
+},
+{
+"ges": 762,
+"nome": "SALSOMAGGIORE TERME",
+"regione": "Emilia Romagna",
+"url": "https://www.emiliagolf.it/"
+},
+{
+"ges": 765,
+"nome": "PANORAMA GOLF",
+"regione": "Lombardia",
+"url": "https://www.panoramagolf.it/"
+},
+{
+"ges": 776,
+"nome": "RIVIERA GOLF",
+"regione": "Emilia Romagna",
+"url": "https://www.rivieragolf.it/"
+},
+{
+"ges": 777,
+"nome": "LAGHI",
+"regione": "Lombardia",
+"url": "https://www.golfdeilaghi.it/"
+},
+{
+"ges": 789,
+"nome": "SAN VALENTINO",
+"regione": "Emilia Romagna",
+"url": "https://www.sanvalentino.it/"
+},
+{
+"ges": 798,
+"nome": "VILLA PARADISO SSD",
+"regione": "Lombardia",
+"url": "https://www.villaparadisogolf.it/"
+},
+{
+"ges": 816,
+"nome": "RIVA TOSCANA",
+"regione": "Toscana",
+"url": "https://www.rivatoscana.it/"
+},
+{
+"ges": 824,
+"nome": "COLOMBERA ASD",
+"regione": "Lombardia",
+"url": "https://www.colomberagolf.it/"
+},
+{
+"ges": 825,
+"nome": "BORMIO SSD",
+"regione": "Lombardia",
+"url": "https://www.bormiogolf.it/"
+},
+{
+"ges": 828,
+"nome": "SANTO STEFANO GOLF",
+"regione": "Emilia Romagna",
+"url": "https://www.santostefanogolf.it/"
+},
+{
+"ges": 829,
+"nome": "TOLCINASCO",
+"regione": "Lombardia",
+"url": "https://www.golftolcinasco.it/"
+},
+{
+"ges": 832,
+"nome": "MONTEVEGLIO ASD",
+"regione": "Emilia Romagna",
+"url": "https://www.golfclubmonteveglio.it/"
+},
+{
+"ges": 834,
+"nome": "VALTELLINA",
+"regione": "Lombardia",
+"url": "https://www.valtellinagolfclub.it/"
+},
+{
+"ges": 839,
+"nome": "TERRE DI CANOSSA",
+"regione": "Emilia Romagna",
+"url": "https://www.emiliagolf.it/"
+},
+{
+"ges": 847,
+"nome": "VIGEVANO G.C. SSD",
+"regione": "Lombardia",
+"url": "https://www.golfvigevano.it/"
+},
+{
+"ges": 855,
+"nome": "CROARA SSD",
+"regione": "Emilia Romagna",
+"url": "https://www.golfcroara.it/"
+},
+{
+"ges": 860,
+"nome": "MONTECATINI TERME SSD",
+"regione": "Toscana",
+"url": "https://www.montecatinigolf.it/"
+}
+]

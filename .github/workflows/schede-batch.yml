@@ -1,0 +1,30 @@
+name: Cerca schede di tutti i circoli
+on:
+  workflow_dispatch:
+    inputs:
+      regione:
+        description: 'Solo una regione (vuoto = tutte)'
+        required: false
+  schedule:
+    - cron: '37 3 1 * *'   # una volta al mese, per prendere le novità dei siti
+permissions:
+  contents: write
+jobs:
+  cerca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Leggi i siti
+        env:
+          REGIONE: ${{ inputs.regione }}
+        run: node scripts/schede-batch.mjs
+      - name: Salva
+        run: |
+          git config user.name "aggiornamento-automatico"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/schede.json data/schede-report.json
+          git diff --cached --quiet || (git commit -m "Schede trovate dai siti dei circoli" && git pull --rebase origin main && git push)
