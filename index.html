@@ -86,7 +86,7 @@ body.race #plays, body.race #iElevW, body.race #gSlope, body.race #gMeasure{disp
 #cImgBox.zoom #cImg{width:260%;max-width:none}
 #cLens{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 #cLens span{padding:4px 8px;border-radius:8px;background:rgba(255,255,255,.08);font-size:13px}
-#cLens span.me{background:#ffd23f;color:#111;font-weight:700}
+#cLens span.mytee{background:#ffd23f;color:#111;font-weight:700}
 #cText{line-height:1.5;font-size:15px;margin:6px 0 12px}
 .b2{display:flex;gap:10px}.b2 .btn{flex:1}
 #gNote{margin-top:6px;font-size:13px;line-height:1.35;color:#ffe9a8}
@@ -608,7 +608,7 @@ function openCard(n){
   $('#cImgBox').classList.remove('zoom');
   $('#cImg').src=cardImg(cardN);
   const g=S.course.ges, tees=g&&g.tees&&b&&g.tees.length===b.len.length ? g.tees.map(t=>t.name) : null;
-  $('#cLens').innerHTML=b ? b.len.map((l,i)=>`<span class="${tees&&tees[i]===S.tee?'me':''}">${tees?esc(tees[i].toLowerCase())+' ':''}${l} m</span>`).join('') : '';
+  $('#cLens').innerHTML=b ? b.len.map((l,i)=>`<span class="${tees&&tees[i]===S.tee?'mytee':''}">${tees?esc(tees[i].toLowerCase())+' ':''}${l} m</span>`).join('') : '';
   $('#cText').textContent=b ? b.text : 'Descrizione non disponibile per questa buca.';
   $('#cSrc').innerHTML='Dal sito del circolo: <a href="'+esc(c.fonte)+'" target="_blank" rel="noopener" style="color:inherit">apri la pagina</a>';
   $('#cPrev').disabled=cardN<=1; $('#cNext').disabled=cardN>=c.buche.length;
