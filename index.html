@@ -65,6 +65,10 @@ body.race #plays, body.race #iElevW, body.race #gSlope, body.race #gMeasure{disp
 
 #toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 70px);z-index:900;
   background:var(--paper);color:var(--ink);padding:10px 16px;border-radius:12px;font-weight:600;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#hv{position:fixed;left:0;right:0;z-index:400;width:100%;touch-action:none;background:#0d1a12}
+.hvnav{position:fixed;z-index:450;width:40px;height:62px;background:rgba(0,0,0,.45);color:#fff;font-size:34px;line-height:1}
+#hvL{left:0;border-radius:0 10px 10px 0}#hvR{right:0;border-radius:10px 0 0 10px}
+.hvbtn{position:fixed;left:12px;z-index:450;padding:10px 14px;border-radius:22px;background:rgba(20,30,24,.85);color:#fff;font-weight:700;border:1px solid rgba(255,255,255,.25)}
 #mode,#gcard{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:600;border-radius:12px;padding:10px 14px}
 #mode{background:var(--flag);color:var(--ink);font-weight:600;display:flex;align-items:center;gap:10px}
 #mode button{margin-left:auto;background:var(--ink);color:var(--paper);border-radius:8px;padding:6px 10px}
@@ -163,6 +167,11 @@ table.score tr{cursor:pointer}
   <button class="iconbtn" id="btnCourse" aria-label="Scegli campo">⛳</button>
 </header>
 
+<canvas id="hv" hidden></canvas>
+<button class="hvnav" id="hvL" hidden aria-label="Buca precedente">‹</button>
+<button class="hvnav" id="hvR" hidden aria-label="Buca successiva">›</button>
+<button class="hvbtn" id="hvMap" hidden>🗺 Mappa</button>
+<button class="hvbtn" id="hvBack" hidden>⛳ Vista buca</button>
 <div id="mode" hidden><span id="modeText"></span><button id="modeSkip" hidden>Salta</button><button id="modeEnd">Fine</button></div>
 <div id="gcard" hidden>
   <div class="t" id="gTitle"></div>
@@ -861,7 +870,7 @@ function showHole(fit){
     if(pts.length) map.fitBounds(pts,{paddingTopLeft:[30,90],paddingBottomRight:[30,250],maxZoom:19});
     else map.fitBounds(S.course.bounds,{paddingTopLeft:[20,90],paddingBottomRight:[20,250]});
   }
-  clearTarget(); update();
+  clearTarget(); update(); hvShow();
 }
 function hazardsOfHole(h){
   let hz=S.course.hazards;
@@ -985,12 +994,12 @@ function enterGreenView(){
   $('#gSub').textContent=s;
   const note=greenNote(cardHole(holeNo()));
   $('#gNote').textContent=note?'Dal circolo: '+note:''; $('#gNote').hidden=!note;
-  $('#gcard').hidden=false;
+  $('#gcard').hidden=false; hvShow();
 }
 function exitGreenView(refit=true){
   if(S.view!=='green') return;
   S.view='hole'; $('#tGreen').classList.remove('on'); $('#gcard').hidden=true; layers.green.clearLayers();
-  if(refit) showHole(true);
+  if(refit) showHole(true); else hvShow();
 }
 $('#gBack').onclick=()=>exitGreenView(true);
 $('#gSlope').onclick=openSlope;
@@ -1197,6 +1206,7 @@ function update(){
   }
   if(S.lastShot && me){ $('#iShotWrap').hidden=false; $('#iShot').textContent=fmt(dist(S.lastShot,me))+' m'; }
   if(!$('#sCard').hidden) cardLive();
+  if(typeof hvDraw==='function' && !$('#hv').hidden) hvDraw();
   drawTarget();
   if(!far) pushWatch(front,pinD,back);
 }
@@ -1246,6 +1256,7 @@ function setMode(m){
   $('#mode').hidden=!m; if(m) $('#modeText').textContent=txt;
   $('#modeSkip').hidden = m!=='drawTee';
   if(!m){ drawLayer.clearLayers(); }
+  if(typeof hvShow==='function') hvShow();
 }
 $('#modeEnd').onclick=()=>{ if(S.mode==='drawGreen') finishDraw(); else { S.draw=null; setMode(null); } };
 $('#modeSkip').onclick=()=>{ S.draw={tee:null,green:[]}; setMode('drawGreen'); };
@@ -1458,7 +1469,7 @@ $('#impFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; impo
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=8',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=9',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
 async function toggleWatch(){
   if(S.watch){ S.watch=false; $('#watchBtn').textContent='Attiva'; $('#watchState').textContent='Spento';
     if(swReg){ (await swReg.getNotifications({tag:'golf'})).forEach(n=>n.close()); } releaseWake(); return; }
@@ -1485,7 +1496,172 @@ function pushWatch(front,pin,back){
   const sig=title+body, now=Date.now();
   if(sig===lastPush || now-lastPushT<4000) return;
   lastPush=sig; lastPushT=now;
-  swReg.showNotification(title,{body, tag:'golf', renotify:false, silent:true, requireInteraction:true, icon:APPICON}).catch(()=>{});
+  const image=hvWatchImage();
+  swReg.showNotification(title,{body, tag:'golf', renotify:false, silent:true, requireInteraction:true, icon:APPICON, ...(image?{image}:{})}).catch(()=>{});
+}
+
+/* ============ vista buca (come Smart Caddie): buca dritta dal tee in basso al green in alto ============ */
+// Disegno su un canvas: foto satellitare scurita sotto, pista disegnata sopra (rough, fairway a righe, green, bunker, acqua, tee),
+// pallini numerati: 1 = io, 2 = punto toccato (si sposta col dito), ultimo = bandiera, con le distanze nei riquadri neri.
+const HV={ on:store.get('hv',true), img:new Map(), frame:0, geo:null, M:null, Minv:null, drag:false, dpr:1 };
+const HVC={ halo:'rgba(26,74,30,.55)', rough2:'#1f5a25', rough:'#2b7a31', fair:'#86cf62', fairS:'#74bd54', fairE:'#2f6f2a',
+  green:'#a4ec5c', greenE:'#7fc847', tee:'#86d64e', sand:'#d2cc9e', sandE:'#b6ae7c', water:'#2f86c8', waterE:'#2a73ad', mark:'#ff4b1f' };
+const P20=ll=>{ const p=L.CRS.EPSG3857.latLngToPoint(L.latLng(ll[0],ll[1]),20); return [p.x,p.y]; };
+const LL20=p=>{ const l=L.CRS.EPSG3857.pointToLatLng(L.point(p[0],p[1]),20); return [l.lat,l.lng]; };
+function hvPoss(){ const h=curHole(); return !!(HV.on && S.course && playable(h) && h.green && (h.tee||h.line) && S.view!=='green' && !S.mode); }
+function hvLayout(){
+  const c=$('#hv'), top=$('#top').getBoundingClientRect().bottom, bot=$('#panel').getBoundingClientRect().top;
+  c.style.top=top+'px'; c.style.height=Math.max(100,bot-top)+'px';
+  $('#hvL').style.top=$('#hvR').style.top=(top+(bot-top)/2-30)+'px';
+  $('#hvMap').style.top=(bot-62)+'px'; $('#hvBack').style.top=(bot-62)+'px';
+}
+function hvShow(){
+  const on=hvPoss();
+  $('#hv').hidden=!on; $('#hvL').hidden=$('#hvR').hidden=$('#hvMap').hidden=!on;
+  $('#hvBack').hidden = HV.on || !(S.course && playable(curHole()) && S.view!=='green' && !S.mode);
+  if(on){ hvLayout(); HV.geo=null; hvDraw(); }
+}
+// geometria della buca in coordinate "pixel al livello 20" (tutte le misure in metri convertite con mpp)
+function hvGeom(){
+  const h=curHole(), c=S.course; if(!h) return null;
+  const G=greenCenter(h), T=h.tee||h.line[0];
+  let line=(h.line&&h.line.length>1)?h.line.slice():[T,G];
+  line[0]=T; if(dist(line[line.length-1],G)>3) line.push(G);
+  const near=(poly,m)=>poly.some(p=>distToPolyline(p,line)<m);
+  const fairs=c.fairways.filter(f=>near(f,25) && distToPolyline(centroid(f),line)<45);
+  const hz=hazardsOfHole(h).filter(z=>near(z.poly,40));
+  const tees=(c.tees||[]).filter(t=>minDistPoly(T,t)<45);
+  const mpp=156543.03392*Math.cos(rad(G[0]))/2**20; // metri per pixel al livello 20
+  const pl=line.map(P20), pT=pl[0], pG=pl[pl.length-1];
+  const ang=Math.atan2(pG[0]-pT[0], -(pG[1]-pT[1])); // rotazione: green in alto
+  return {h,line,pl,fairs,hz,tees,mpp,ang,len:dist(T,G),G,T};
+}
+function hvTransform(g, W, H, padTop, padBot){
+  // punti da far stare nello schermo: pista + green + (io, se sono vicino alla buca)
+  const pts=g.pl.concat(g.h.green.map(P20)); g.fairs.forEach(f=>f.forEach(p=>pts.push(P20(p))));
+  if(S.me && distToPolyline(S.me,g.line)<120) pts.push(P20(S.me));
+  if(S.target) pts.push(P20(S.target));
+  const ca=Math.cos(-g.ang), sa=Math.sin(-g.ang), r=p=>[p[0]*ca-p[1]*sa, p[0]*sa+p[1]*ca];
+  let x0=1e18,x1=-1e18,y0=1e18,y1=-1e18; pts.map(r).forEach(([x,y])=>{x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
+  const m=45/g.mpp; x0-=m; x1+=m; y0-=m*.8; y1+=m*.8;
+  const s=Math.min((W-40)/(x1-x0), (H-padTop-padBot)/(y1-y0), g.mpp/0.08); // al massimo 8 cm per pixel
+  const cx=W/2, cy=padTop+(H-padTop-padBot)/2, mx=(x0+x1)/2, my=(y0+y1)/2, ia=Math.cos(g.ang), ib=Math.sin(g.ang);
+  return new DOMMatrix().translate(cx,cy).scale(s).rotate(-g.ang*180/Math.PI).translate(-(mx*ia-my*ib), -(mx*ib+my*ia));
+}
+function hvPattern(ctx, s){
+  if(!HV.pat){ const n=24, p=document.createElement('canvas'); p.width=p.height=n; const x=p.getContext('2d');
+    x.fillStyle=HVC.fair; x.fillRect(0,0,n,n); x.strokeStyle=HVC.fairS; x.lineWidth=7;
+    for(const o of [-n,0,n]){ x.beginPath(); x.moveTo(o,n); x.lineTo(o+n,0); x.stroke(); } HV.patC=p; HV.pat=true; }
+  const pat=ctx.createPattern(HV.patC,'repeat'); try{ pat.setTransform(new DOMMatrix().scale(1/s)); }catch(e){} return pat;
+}
+function hvTiles(ctx, M, W, H){
+  const inv=M.inverse(), corners=[[0,0],[W,0],[0,H],[W,H]].map(([x,y])=>{ const p=inv.transformPoint(new DOMPoint(x,y)); return [p.x,p.y]; });
+  const s=Math.hypot(M.a,M.b), z=Math.max(14,Math.min(19,Math.round(20+Math.log2(s*HV.dpr*1.2)))), k=2**(20-z), T=256*k;
+  const xs=corners.map(c=>c[0]), ys=corners.map(c=>c[1]);
+  const tx0=Math.floor(Math.min(...xs)/T), tx1=Math.floor(Math.max(...xs)/T), ty0=Math.floor(Math.min(...ys)/T), ty1=Math.floor(Math.max(...ys)/T);
+  if((tx1-tx0+1)*(ty1-ty0+1)>120) return;
+  for(let x=tx0;x<=tx1;x++) for(let y=ty0;y<=ty1;y++){
+    const u=`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+    let im=HV.img.get(u); if(!im){ im=new Image(); im.onload=()=>hvDraw(); im.src=u; HV.img.set(u,im); if(HV.img.size>400) HV.img.delete(HV.img.keys().next().value); }
+    if(im.complete&&im.naturalWidth) ctx.drawImage(im, x*T, y*T, T+k, T+k);
+  }
+}
+function hvPath(ctx, poly){ ctx.beginPath(); poly.forEach((p,i)=>{ const q=P20(p); i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]); }); ctx.closePath(); }
+function hvStroke(ctx, pl, w){ ctx.beginPath(); pl.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])); ctx.lineWidth=w; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke(); }
+// tratto di pista dai metri a ai metri b (misurati dal tee lungo la linea della buca)
+function hvSub(g, a, b){ const out=[]; let acc=0; for(let i=1;i<g.line.length;i++){ const d=dist(g.line[i-1],g.line[i]);
+  for(let t=0;t<=1.0001;t+=0.05){ const m=acc+d*t; if(m>=a&&m<=b) out.push(P20([g.line[i-1][0]+(g.line[i][0]-g.line[i-1][0])*t, g.line[i-1][1]+(g.line[i][1]-g.line[i-1][1])*t])); }
+  acc+=d; } return out; }
+// disegna la buca su un contesto già dimensionato W×H (in pixel CSS). opt.tiles: foto sotto; opt.small: per l'orologio
+function hvRender(ctx, W, H, opt={}){
+  const g=HV.geo||(HV.geo=hvGeom()); if(!g) return null;
+  const M=hvTransform(g, W, H, opt.padTop??70, opt.padBot??24), s=Math.hypot(M.a,M.b), mm=1/g.mpp; // mm = pixel(z20) per metro
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.fillStyle='#0d1a12'; ctx.fillRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.setTransform(M.a*HV.dpr*(opt.scale||1),M.b*HV.dpr*(opt.scale||1),M.c*HV.dpr*(opt.scale||1),M.d*HV.dpr*(opt.scale||1),M.e*HV.dpr*(opt.scale||1),M.f*HV.dpr*(opt.scale||1));
+  if(opt.tiles){ ctx.filter='brightness(.42) saturate(.6) blur(1px)'; hvTiles(ctx,M,W,H); ctx.filter='none'; }
+  // pista: alone, rough scuro, rough (dal tee a dietro il green)
+  const full=g.pl.concat([ (()=>{ const a=g.pl[g.pl.length-2], b=g.pl[g.pl.length-1], d=Math.hypot(b[0]-a[0],b[1]-a[1])||1; return [b[0]+(b[0]-a[0])/d*22*mm, b[1]+(b[1]-a[1])/d*22*mm]; })() ]);
+  const wide=Math.min(70, Math.max(46, g.len*0.14));
+  // la pista avvolge anche fairway, green e ostacoli vicini (forma "morbida" come nelle app da campo)
+  const blobs=g.fairs.concat([g.h.green], g.hz.map(z=>z.poly));
+  for(const [col,extra] of [[HVC.halo,26],[HVC.rough2,10],[HVC.rough,0]]){
+    ctx.strokeStyle=col; ctx.fillStyle=col; hvStroke(ctx, full, (wide+extra)*mm);
+    blobs.forEach(b=>{ hvPath(ctx,b); ctx.fill(); ctx.lineWidth=(18+extra)*mm; ctx.stroke(); }); }
+  // fairway: quelli di OpenStreetMap, altrimenti stimato lungo la linea della buca (non nei par 3)
+  const pat=hvPattern(ctx, s); ctx.lineWidth=1.2/s;
+  if(g.fairs.length) g.fairs.forEach(f=>{ hvPath(ctx,f); ctx.fillStyle=pat; ctx.fill(); ctx.strokeStyle=HVC.fairE; ctx.stroke(); });
+  else if(g.len>210){ const a=g.len>420?175:Math.min(140,g.len*0.38), b=g.len-32; const sub=hvSub(g,a,b);
+    if(sub.length>1){ ctx.strokeStyle=HVC.fairE; hvStroke(ctx, sub, 32*mm); ctx.strokeStyle=pat; hvStroke(ctx, sub, 29*mm); } }
+  // tee
+  if(g.tees.length) g.tees.forEach(t=>{ hvPath(ctx,t); ctx.fillStyle=HVC.tee; ctx.fill(); });
+  else { const pT=g.pl[0], a=g.pl[1]; const d=Math.hypot(a[0]-pT[0],a[1]-pT[1])||1, ux=(a[0]-pT[0])/d, uy=(a[1]-pT[1])/d;
+    ctx.strokeStyle=HVC.tee; hvStroke(ctx, [[pT[0]-ux*7*mm,pT[1]-uy*7*mm],[pT[0]+ux*7*mm,pT[1]+uy*7*mm]], 7*mm); }
+  // acqua e bunker
+  g.hz.filter(z=>z.type==='water').forEach(z=>{ hvPath(ctx,z.poly); ctx.fillStyle=HVC.water; ctx.fill(); ctx.strokeStyle=HVC.waterE; ctx.stroke(); });
+  // green
+  hvPath(ctx,g.h.green); ctx.fillStyle=HVC.green; ctx.fill(); ctx.strokeStyle=HVC.greenE; ctx.lineWidth=1.5/s; ctx.stroke();
+  g.hz.filter(z=>z.type!=='water').forEach(z=>{ hvPath(ctx,z.poly); ctx.fillStyle=HVC.sand; ctx.fill(); ctx.strokeStyle=HVC.sandE; ctx.lineWidth=1/s; ctx.stroke(); });
+  // da qui in pixel dello schermo
+  const k=HV.dpr*(opt.scale||1); ctx.setTransform(k,0,0,k,0,0);
+  const scr=ll=>{ const q=P20(ll), p=M.transformPoint(new DOMPoint(q[0],q[1])); return [p.x,p.y]; };
+  const pp=pinPos(), pts=[];
+  const meOk=S.me && dist(S.me,pp)<1500;
+  if(meOk) pts.push({ll:S.me, me:true});
+  if(S.target) pts.push({ll:S.target, tgt:true});
+  pts.push({ll:pp, pin:true});
+  const R=opt.small?13:15;
+  // linee e distanze
+  ctx.strokeStyle=HVC.mark; ctx.lineWidth=opt.small?3:2.5;
+  for(let i=1;i<pts.length;i++){ const a=scr(pts[i-1].ll), b=scr(pts[i].ll); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); }
+  ctx.font=`700 ${opt.small?20:17}px system-ui,sans-serif`; ctx.textBaseline='middle';
+  for(let i=1;i<pts.length;i++){ const a=scr(pts[i-1].ll), b=scr(pts[i].ll); if(Math.hypot(b[0]-a[0],b[1]-a[1])<40) continue;
+    const t=Math.round(dist(pts[i-1].ll,pts[i].ll))+'m', w=ctx.measureText(t).width+16, hh=opt.small?30:28;
+    let x=(a[0]+b[0])/2+12, y=(a[1]+b[1])/2; x=Math.min(x, W-w-6);
+    ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fillRect(x+3,y-hh/2+3,w,hh); ctx.fillStyle='#000'; hvRound(ctx,x,y-hh/2,w,hh,5); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.fillText(t,x+8,y+1); }
+  pts.forEach((p,i)=>{ const [x,y]=scr(p.ll);
+    if(p.pin){ ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y-30); ctx.stroke(); ctx.fillStyle=HVC.mark; ctx.beginPath(); ctx.moveTo(x+1,y-30); ctx.lineTo(x+18,y-24); ctx.lineTo(x+1,y-18); ctx.fill(); return; }
+    ctx.fillStyle=HVC.mark; ctx.beginPath(); ctx.arc(x,y,R,0,7); ctx.fill();
+    if(p.me){ ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke(); }
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.font=`800 ${opt.small?15:17}px system-ui,sans-serif`; ctx.fillText(String(i+1),x,y+1); ctx.textAlign='left'; });
+  // numero della buca
+  if(!opt.small){ ctx.fillStyle='#fff'; ctx.textAlign='right'; ctx.textBaseline='alphabetic'; ctx.shadowColor='rgba(0,0,0,.6)'; ctx.shadowBlur=6;
+    ctx.font='800 26px system-ui,sans-serif'; const n=String(g.h.ref); ctx.font='800 54px system-ui,sans-serif'; const wn=ctx.measureText(n).width;
+    ctx.fillText(n,W-16,62); ctx.font='800 30px system-ui,sans-serif'; ctx.fillText('#',W-20-wn,58);
+    ctx.font='600 14px system-ui,sans-serif'; ctx.fillText('Par '+holePar(S.hole)+(holeLen(g.h)?' · '+holeLen(g.h)+' m':''),W-16,84); ctx.shadowBlur=0; ctx.textAlign='left';
+    if(opt.tiles){ ctx.font='10px system-ui,sans-serif'; ctx.fillStyle='rgba(255,255,255,.45)'; ctx.fillText('Immagini © Esri',8,H-8); } }
+  ctx.restore(); return M;
+}
+function hvRound(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function hvDraw(){
+  if(HV.frame) return; HV.frame=requestAnimationFrame(()=>{ HV.frame=0;
+    if(!hvPoss()) return; const c=$('#hv'), ctx=c.getContext&&c.getContext('2d'); if(!ctx) return;
+    HV.dpr=Math.min(3,window.devicePixelRatio||1); const W=c.clientWidth, H=c.clientHeight;
+    if(c.width!==Math.round(W*HV.dpr)||c.height!==Math.round(H*HV.dpr)){ c.width=Math.round(W*HV.dpr); c.height=Math.round(H*HV.dpr); }
+    HV.M=hvRender(ctx,W,H,{tiles:true}); });
+}
+// tocchi: un tocco mette il punto 2 (bersaglio), trascinandolo si sposta; in modalità prova sposta "me"
+function hvPt(e){ const r=$('#hv').getBoundingClientRect(); return [e.clientX-r.left, e.clientY-r.top]; }
+function hvToLL(xy){ if(!HV.M) return null; const p=HV.M.inverse().transformPoint(new DOMPoint(xy[0],xy[1])); return LL20([p.x,p.y]); }
+$('#hv').addEventListener('pointerdown',e=>{
+  const xy=hvPt(e), ll=hvToLL(xy); if(!ll) return;
+  if(S.sim){ setMe(ll,3); return; }
+  HV.drag=true; try{ $('#hv').setPointerCapture(e.pointerId); }catch(er){} S.target=ll; update();
+});
+$('#hv').addEventListener('pointermove',e=>{ if(!HV.drag) return; const ll=hvToLL(hvPt(e)); if(ll){ S.target=ll; hvDraw(); } });
+$('#hv').addEventListener('pointerup',()=>{ if(HV.drag){ HV.drag=false; update(); } });
+$('#hvL').onclick=()=>changeHole(-1);
+$('#hvR').onclick=()=>changeHole(1);
+$('#hvMap').onclick=()=>{ HV.on=false; store.set('hv',false); hvShow(); showHole(true); toast('Mappa libera: tocca "Vista buca" per tornare'); };
+$('#hvBack').onclick=()=>{ HV.on=true; store.set('hv',true); hvShow(); };
+window.addEventListener('resize',()=>{ if(!$('#hv').hidden){ hvLayout(); hvDraw(); } });
+try{ new ResizeObserver(()=>{ if(!$('#hv').hidden){ hvLayout(); hvDraw(); } }).observe($('#panel')); }catch(e){}
+// immagine piccola della buca per l'orologio (solo disegno, senza foto)
+function hvWatchImage(){
+  try{ if(!S.course||!playable(curHole())) return null; const c=document.createElement('canvas'); c.width=c.height=360;
+    const ctx=c.getContext('2d'); if(!ctx) return null; const keep=HV.dpr; HV.dpr=1; HV.geo=null;
+    hvRender(ctx,360,360,{small:true,padTop:16,padBot:16}); HV.dpr=keep; HV.geo=null; return c.toDataURL('image/png'); }catch(e){ return null; }
 }
 
 /* ============ pulsanti ============ */
