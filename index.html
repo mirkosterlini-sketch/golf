@@ -264,7 +264,6 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Ostacoli di questa buca</b><div class="hint">Bunker e acqua: quanto manca e quanto per superarli</div></div><button class="btn" id="openHaz">Apri</button></div>
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
   <div class="row"><div class="grow"><b>Schede da un link</b><div class="hint">Incolli il link del sito di un circolo nuovo e l'app prepara le schede delle buche</div></div><button class="btn" id="linkBtn">Apri</button></div>
-  <div class="row"><div class="grow"><b>Vista della mappa</b><div class="hint" id="styleState">Foto</div></div><button class="btn" id="btnStyle">Cambia</button></div>
   <div class="row"><div class="grow"><b>Foto aerea</b><div class="hint" id="imgState">Satellite</div></div><button class="btn" id="imgBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Scarica la mappa del campo</b><div class="hint" id="dlState">Così funziona anche dove non c'è segnale</div></div><button class="btn" id="dlBtn">Scarica</button></div>
   <div class="row"><div class="grow"><b>Passa i dati a un altro dispositivo</b><div class="hint">Buche disegnate, pendenze, bastoni e impostazioni, dal PC al telefono o viceversa</div></div><button class="btn" id="syncBtn">Apri</button></div>
@@ -423,7 +422,7 @@ const S = {
   course:null, hole:0, me:null, acc:null, sim:false, target:null, mode:null, view:'hole',
   wx:null, elev:{}, clubs:(c=>!c||JSON.stringify(c)===OLD_DEFAULT?DEFAULT_CLUBS:c)(store.get('clubs',null)), phcp:store.get('phcp',20),
   round:store.get('round',null), slopes:{}, watch:false, lastShot:null, near:[], scoreHole:0,
-  index:store.get('index',19.4), race:store.get('race',false), style:store.get('style','sat'), tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
+  index:store.get('index',19.4), race:store.get('race',false), style:'sat', tee:store.get('tee','GIALLO'), gesData:store.get('ges',null), draw:null
 };
 if(!S.round || S.round.date!==today()) S.round=null;
 function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}}; store.set('round',S.round); }
@@ -760,7 +759,6 @@ function applyStyle(){
   $('#map').classList.toggle('drawn',drawn);
   if(drawn){ map.removeLayer(ESRI); if(regLayer) map.removeLayer(regLayer); map.setMaxZoom(21); }
   else { if(!map.hasLayer(ESRI)) ESRI.addTo(map); if(regLayer){ regLayer.addTo(map); map.setMaxZoom(21); } else map.setMaxZoom(20); }
-  $('#styleState').textContent = drawn ? 'Disegno: solo le linee di green e ostacoli' : 'Foto';
   drawCourse(); if(S.course) showHole(false);
 }
 
@@ -1460,7 +1458,7 @@ $('#impFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; impo
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=7',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=8',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
 async function toggleWatch(){
   if(S.watch){ S.watch=false; $('#watchBtn').textContent='Attiva'; $('#watchState').textContent='Spento';
     if(swReg){ (await swReg.getNotifications({tag:'golf'})).forEach(n=>n.close()); } releaseWake(); return; }
@@ -1499,7 +1497,7 @@ $('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; 
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
 $('#tMore').onclick=()=>{ showDlState(); openSheet('#sMore'); };
 $('#openHaz').onclick=openHaz;
-$('#btnStyle').onclick=()=>{ S.style=S.style==='map'?'sat':'map'; store.set('style',S.style); applyStyle(); toast(S.style==='map'?'Vista disegno':'Vista foto'); };
+store.set('style','sat'); // la vista disegno non c'è più: sempre la foto
 function applyRace(){
   document.body.classList.toggle('race',S.race); $('#raceTag').hidden=!S.race;
   $('#raceBtn').textContent=S.race?'Spegni':'Attiva'; $('#raceBtn').classList.toggle('main',S.race);
