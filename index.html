@@ -123,6 +123,12 @@ table.score tr{cursor:pointer}
 .lbl{background:rgba(15,31,23,.88);color:#fff;border-radius:8px;padding:2px 7px;font:600 14px var(--num);white-space:nowrap;border:1px solid rgba(255,255,255,.3)}
 .lbl.s{font-size:12px;padding:1px 5px}
 .lbl.sand{color:#f3dca6} .lbl.water{color:#9fd3ff}
+.level{display:grid;place-items:center;margin:12px auto;width:220px;height:220px;border-radius:50%;background:radial-gradient(#2f6b3b,#173d22);border:2px solid var(--line);position:relative}
+.level .big{font:700 46px var(--num);color:var(--flag);line-height:1}
+.level .dir{position:absolute;inset:0;display:grid;place-items:center;font-size:120px;color:rgba(255,255,255,.85);transition:transform .2s}
+.level .txt{position:relative;text-align:center}
+.mstate{text-align:center;font-weight:600;margin:6px 0}
+.lbl.slp{color:#ffe28a}
 .arr{color:#fff;text-shadow:0 0 3px #000,0 0 6px #000;line-height:1;display:block;text-align:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -144,7 +150,7 @@ table.score tr{cursor:pointer}
 <div id="gcard" hidden>
   <div class="t" id="gTitle"></div>
   <div class="s" id="gSub"></div>
-  <div class="b"><button id="gSlope">Pendenza</button><button id="gFlag">Bandiera</button><button id="gHere">Sono sul green</button><button class="main" id="gBack">Torna alla buca</button></div>
+  <div class="b"><button id="gSlope">Pendenza</button><button id="gMeasure">Livella</button><button id="gFlag">Bandiera</button><button id="gHere">Sono sul green</button><button class="main" id="gBack">Torna alla buca</button></div>
 </div>
 <div id="toast" hidden></div>
 
@@ -212,6 +218,7 @@ table.score tr{cursor:pointer}
   <div class="chips" id="strength"></div>
   <textarea id="greenNote" rows="2" placeholder="Note, es. doppio piano, veloce in discesa"></textarea>
   <button class="btn main block" id="greenSave">Salva per questo green</button>
+  <button class="btn block" id="measureBtn">Misura con il telefono (livella)</button>
   <p class="hint" style="margin-top:12px">Quello che segni resta salvato per le prossime volte. Le pendenze rilevate dal laser per i tuoi campi si aggiungeranno qui.</p>
 </div></div>
 
@@ -237,6 +244,7 @@ table.score tr{cursor:pointer}
   <div class="row"><div class="grow"><b>Sono sul green</b><div class="hint">Salva la posizione esatta del green di questa buca</div></div><button class="btn" id="hereBtn">Salva</button></div>
   <div class="row"><div class="grow"><b>Ostacoli di questa buca</b><div class="hint">Bunker e acqua: quanto manca e quanto per superarli</div></div><button class="btn" id="openHaz">Apri</button></div>
   <div class="row"><div class="grow"><b>Distanze al Galaxy Watch</b><div class="hint" id="watchState">Le distanze in una notifica che vedi al polso</div></div><button class="btn" id="watchBtn">Attiva</button></div>
+  <div class="row"><div class="grow"><b>Foto aerea</b><div class="hint" id="imgState">Satellite</div></div><button class="btn" id="imgBtn">Cambia</button></div>
   <div class="row"><div class="grow"><b>Scarica la mappa del campo</b><div class="hint" id="dlState">Così funziona anche dove non c'è segnale</div></div><button class="btn" id="dlBtn">Scarica</button></div>
   <div class="row"><div class="grow"><b>I miei bastoni</b><div class="hint">Le tue distanze medie, per il consiglio del bastone</div></div><button class="btn" id="openClubs">Modifica</button></div>
   <div class="row"><div class="grow"><b>Campi vicini sulla mappa</b></div><button class="btn" id="showNear">Mostra</button></div>
@@ -253,6 +261,17 @@ table.score tr{cursor:pointer}
   <p class="sub">Scegli il circolo su GesGolf che corrisponde a questo campo. I dati si aggiornano da soli ogni settimana.</p>
   <input id="gesQ" placeholder="Cerca il circolo" autocomplete="off">
   <div id="gesList"></div>
+</div></div>
+
+<div class="sheet" id="sMeasure" hidden><div>
+  <button class="close" data-close>×</button>
+  <h2>Livella sul green</h2>
+  <p class="sub">Appoggia il telefono piatto sul green, schermo in su, nel punto che vuoi misurare. Non toccarlo per 3 secondi.</p>
+  <div class="level"><div class="dir" id="mArrow">↑</div><div class="txt"><div class="big num" id="mPct">—</div><div class="hint">pendenza</div></div></div>
+  <div class="mstate" id="mState">Aspetto i sensori…</div>
+  <button class="btn main block" id="mGo">Misura qui</button>
+  <button class="btn block" id="mDel">Cancella le misure di questo green</button>
+  <p class="hint" style="margin-top:10px">La freccia indica dove scende la palla. Per una misura precisa l'app ti chiede di girare il telefono di mezzo giro e misurare di nuovo: così annulla l'errore del sensore. Tieni lontani bastoni e carrello (disturbano la bussola).<br><b>In gara ufficiale</b> le Regole del golf non permettono di misurare le pendenze: usala nei giri di allenamento, le misure restano salvate.</p>
 </div></div>
 
 <div class="sheet" id="sClubs" hidden><div>
@@ -348,9 +367,33 @@ if(!S.round || S.round.date!==today()) S.round=null;
 function newRound(){ S.round={date:today(), course:S.course&&S.course.id, scores:{}, pins:{}}; store.set('round',S.round); }
 
 /* ============ mappa ============ */
-const map = L.map('map',{zoomControl:false, maxZoom:21}).setView([44.4,8.9],9);
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  {maxNativeZoom:19, maxZoom:21, attribution:'Immagini © Esri · Campi © OpenStreetMap'}).addTo(map);
+const map = L.map('map',{zoomControl:false, maxZoom:20}).setView([44.4,8.9],9);
+// foto di base: satellite Esri (nitida fino al livello 19, poi l'app non ingrandisce oltre il 20 per non sgranare)
+const ESRI=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {maxNativeZoom:19, maxZoom:20, attribution:'Immagini © Esri · Campi © OpenStreetMap'}).addTo(map);
+// ortofoto ufficiali delle Regioni, 20 cm per pixel: nitide fino al massimo ingrandimento
+const M3857=20037508.342789244;
+function tileBBox(c){ const n=2**c.z, w=2*M3857/n; return [-M3857+c.x*w, M3857-(c.y+1)*w, -M3857+(c.x+1)*w, M3857-c.y*w].join(','); }
+const REGION_IMG={
+  Liguria:{name:'Ortofoto Regione Liguria 2022', make:()=>L.tileLayer.wms('https://geoservizi.regione.liguria.it/geoserver/M2555/wms',
+    {layers:'L10401',format:'image/png',transparent:true,version:'1.3.0',maxZoom:21,attribution:'Ortofoto 2022 © Regione Liguria'})},
+  Lombardia:{name:'Ortofoto Regione Lombardia 2021', make:()=>new (L.TileLayer.extend({getTileUrl(c){
+    return 'https://www.cartografia.servizirl.it/arcgis2/rest/services/BaseMap/Ortofoto2021/ImageServer/exportImage?bbox='+tileBBox(c)+'&bboxSR=3857&imageSR=3857&size=256,256&format=png&transparent=true&f=image'; }}))('',
+    {maxZoom:21,attribution:'Ortofoto AGEA 2021 © Regione Lombardia'})}
+};
+let regLayer=null;
+function hiRes(){ return !!regLayer; }
+function setImagery(region){
+  if(regLayer){ map.removeLayer(regLayer); regLayer=null; }
+  const pref=store.get('img','auto'), r=REGION_IMG[region];
+  if(r && pref!=='esri'){ regLayer=r.make().addTo(map); map.setMaxZoom(21); $('#imgState').textContent=r.name+' (nitida)'; }
+  else { map.setMaxZoom(20); $('#imgState').textContent='Satellite'+(r?' (c\'è anche la '+r.name+')':''); }
+}
+async function regionOf(data){
+  if(data.region!==undefined) return data.region;
+  try{ const c=centroid(data.bounds); const r=await timeoutFetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=5&accept-language=it&lat=${c[0]}&lon=${c[1]}`,{},10000);
+    const j=await r.json(); data.region=(j.address&&j.address.state)||null; store.set('course.'+data.id,data); return data.region; }catch(e){ return null; }
+}
 const layers = { courses:L.layerGroup().addTo(map), course:L.layerGroup().addTo(map), hole:L.layerGroup().addTo(map),
   green:L.layerGroup().addTo(map), live:L.layerGroup().addTo(map) };
 const divIcon = (html, size, anchor) => L.divIcon({className:'', html, iconSize:size, iconAnchor:anchor});
@@ -452,6 +495,7 @@ function buildCourse(data){
     for(const g of greens){ const d=minDistPoly(end,g); if(d<bd){bd=d;best=g;} }
     if(bd<60) h.green=best; }
   S.course={id:data.id, src:data.src, name:data.name, bounds:data.bounds, greens, hazards, osmHoles, holes:[]};
+  regionOf(data).then(rg=>{ if(S.course&&S.course.id===data.id){ S.course.region=rg; setImagery(rg); } });
   S.course.ges=findGes(S.course);
   rebuildHoles();
   S.slopes=store.get('slopes.'+data.id,{});
@@ -754,7 +798,7 @@ function enterGreenView(){
   if(S.view!=='green'){ try{ history.pushState({green:1},''); }catch(e){} }
   const h=curHole(); if(!h||!h.green){ toast(h?'Questo green non è disegnato sulla mappa':'Carica prima un campo'); return; }
   S.view='green'; $('#tGreen').classList.add('on');
-  map.fitBounds(h.green,{paddingTopLeft:[20,190],paddingBottomRight:[20,260],maxZoom:21});
+  map.fitBounds(h.green,{paddingTopLeft:[20,190],paddingBottomRight:[20,260],maxZoom:hiRes()?21:20});
   drawSlopeField();
   const ext=greenExtent(h), depth=Math.round(ext.back+ext.front), width=Math.round(ext.left+ext.right);
   $('#gTitle').textContent= h.greenEst ? `Green buca ${h.ref} · forma stimata (non disegnato sulla mappa)` : `Green buca ${h.ref} · profondo ${depth} m · largo ${width} m`;
@@ -778,11 +822,33 @@ $('#gFlag').onclick=openFlag;
 const DIRS=[['↖',315],['↑',0],['↗',45],['←',270],['·',null],['→',90],['↙',225],['↓',180],['↘',135]];
 const STRENGTH=[['lieve',1],['media',2],['forte',3]];
 function slopeKey(){ const h=curHole(); return h&&h.green ? centroid(h.green).map(v=>v.toFixed(5)).join(',') : null; }
-function slopeText(){ const k=slopeKey(); const s=k&&S.slopes[k]; if(!s||s.rel==null) return '';
+function measuredMean(s){ if(!s||!s.pts||!s.pts.length) return null; let e=0,n=0; s.pts.forEach(q=>{e+=q.e;n+=q.n;}); e/=s.pts.length; n/=s.pts.length; return {e,n,pct:Math.hypot(e,n),brg:(deg(Math.atan2(e,n))+360)%360}; }
+const SECT=['verso il fondo','verso il fondo a destra','verso destra','verso di te, a destra','verso di te','verso di te, a sinistra','verso sinistra','verso il fondo a sinistra'];
+const pctTxt=v=>v.toFixed(1).replace('.',',')+'%';
+function slopeText(){ const k=slopeKey(); const s=k&&S.slopes[k];
+  const m=measuredMean(s);
+  if(m){ const rel=((m.brg-greenAxis(curHole()))%360+360)%360; const many=s.pts.length>1?` (media di ${s.pts.length} punti)`:'';
+    return m.pct<0.5 ? 'Green quasi in piano'+many : `Scende ${SECT[Math.round(rel/45)%8]}, ${pctTxt(m.pct)}${many}`+(s.note?' · '+s.note:''); }
+  if(!s||s.rel==null) return '';
   const names={0:'verso il fondo',45:'verso il fondo a destra',90:'verso destra',135:'verso di te, a destra',180:'verso di te',225:'verso di te, a sinistra',270:'verso sinistra',315:'verso il fondo a sinistra'};
   return `Scende ${names[s.rel]} (${STRENGTH.find(x=>x[1]===s.str)[0]})`+(s.note?' · '+s.note:''); }
 function drawSlopeField(){
   layers.green.clearLayers();
+  const h0=curHole(), k0=slopeKey(), s0=k0&&S.slopes[k0];
+  if(h0&&h0.green&&s0&&s0.pts&&s0.pts.length){ // misure vere: frecce interpolate su tutto il green + valori nei punti misurati
+    const c=centroid(h0.green), P=proj(c), q=h0.green.map(P.to), pts=s0.pts.map(x=>({...x, xy:P.to(x.p)}));
+    let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9; q.forEach(p=>{minx=Math.min(minx,p[0]);maxx=Math.max(maxx,p[0]);miny=Math.min(miny,p[1]);maxy=Math.max(maxy,p[1]);});
+    const step=Math.max(3.5,(maxx-minx)/7);
+    for(let x=minx+step/2;x<maxx;x+=step) for(let y=miny+step/2;y<maxy;y+=step){
+      const p=P.from([x,y]); if(!inside(p,h0.green)) continue;
+      let we=0,wn=0,ws=0; pts.forEach(t=>{ const w=1/Math.max(1,(t.xy[0]-x)**2+(t.xy[1]-y)**2); we+=w*t.e; wn+=w*t.n; ws+=w; });
+      const e=we/ws, n=wn/ws, pct=Math.hypot(e,n); if(pct<0.3) continue;
+      const size=Math.round(Math.min(30,12+pct*5));
+      L.marker(p,{icon:divIcon(`<span class="arr" style="font-size:${size}px;transform:rotate(${deg(Math.atan2(e,n))}deg)">↑</span>`,[size,size],[size/2,size/2]),interactive:false}).addTo(layers.green);
+    }
+    pts.forEach(t=>lbl(t.p, pctTxt(Math.hypot(t.e,t.n)), 's slp').addTo(layers.green));
+    return;
+  }
   const h=curHole(), k=slopeKey(); if(!h||!h.green||!k||!S.slopes[k]||S.slopes[k].rel==null) return;
   const s=S.slopes[k], abs=(greenAxis(h)+s.rel)%360, c=centroid(h.green), P=proj(c), q=h.green.map(P.to);
   let minx=1e9,maxx=-1e9,miny=1e9,maxy=-1e9; q.forEach(p=>{minx=Math.min(minx,p[0]);maxx=Math.max(maxx,p[0]);miny=Math.min(miny,p[1]);maxy=Math.max(maxy,p[1]);});
@@ -807,6 +873,70 @@ function openSlope(){
   $('#greenSave').onclick=()=>{ S.slopes[k]={rel,str,note:$('#greenNote').value.trim()}; store.set('slopes.'+S.course.id,S.slopes); closeSheets(); enterGreenView(); toast('Pendenza salvata'); };
   openSheet('#sGreen');
 }
+
+/* ============ livella: pendenza misurata con i sensori del telefono ============ */
+// Usa la gravità (accelerometro) per l'inclinazione e la bussola per la direzione.
+// Due misure a 180° l'una dall'altra annullano l'errore fisso del sensore.
+const MZ={on:false, buf:[], head:null, first:null, flip:null};
+function headingFrom(e){ if(e.webkitCompassHeading!=null) return e.webkitCompassHeading; if(e.absolute&&e.alpha!=null) return (360-e.alpha)%360; return null; }
+function onOrient(e){ const h=headingFrom(e); if(h!=null) MZ.head=h; }
+function onMotion(e){
+  const g=e.accelerationIncludingGravity; if(!g||g.x==null) return;
+  MZ.buf.push({x:g.x,y:g.y,z:g.z,t:Date.now(),h:MZ.head}); const cut=Date.now()-3000; while(MZ.buf.length&&MZ.buf[0].t<cut) MZ.buf.shift();
+  liveLevel();
+}
+function reading(){ // media degli ultimi 2,5 s se il telefono è fermo
+  const now=Date.now(), b=MZ.buf.filter(s=>now-s.t<=2500); if(b.length<10) return null;
+  let x=0,y=0,z=0; b.forEach(s=>{x+=s.x;y+=s.y;z+=s.z;}); x/=b.length; y/=b.length; z/=b.length;
+  const jitter=Math.max(...b.map(s=>Math.hypot(s.x-x,s.y-y))); if(jitter>0.35) return {moving:true};
+  const flip = z<0 ? -1 : 1; x*=flip; y*=flip; z*=flip;          // iPhone ha i segni invertiti
+  if(z<8) return {notflat:true};
+  const hs=b.map(s=>s.h).filter(v=>v!=null);
+  if(hs.length>1 && Math.max(...hs.map(v=>Math.abs(((v-hs[hs.length-1]+540)%360)-180)))>12) return {moving:true}; // il telefono sta ancora girando
+  const head = hs.length ? (deg(Math.atan2(hs.reduce((a,v)=>a+Math.sin(rad(v)),0), hs.reduce((a,v)=>a+Math.cos(rad(v)),0)))+360)%360 : null;
+  const dx=-x/z*100, dy=-y/z*100;                                  // verso dove scende, in % (x = destra del telefono, y = verso l'alto del telefono)
+  return {dx,dy,pct:Math.hypot(dx,dy),head};
+}
+function toEarth(r){ const a=rad(r.head); return {e:r.dx*Math.cos(a)+r.dy*Math.sin(a), n:-r.dx*Math.sin(a)+r.dy*Math.cos(a)}; }
+function liveLevel(){
+  if($('#sMeasure').hidden) return;
+  const r=reading();
+  if(!r){ return; }
+  if(r.moving){ $('#mState').textContent='Tieni fermo il telefono…'; return; }
+  if(r.notflat){ $('#mState').textContent='Appoggia il telefono piatto sul green'; return; }
+  $('#mPct').textContent=pctTxt(r.pct);
+  $('#mArrow').style.transform=`rotate(${deg(Math.atan2(r.dx,r.dy))}deg)`;
+  if(r.head==null) $('#mState').textContent='Bussola non disponibile: la direzione non può essere salvata';
+  else if(MZ.first) $('#mState').textContent='Ora gira il telefono di mezzo giro (la parte alta verso di te) e premi di nuovo';
+  else $('#mState').textContent='Pronto: premi Misura qui';
+}
+async function openMeasure(){
+  const h=curHole(); if(!h||!h.green){ toast('Questo green non è disegnato sulla mappa'); return; }
+  try{ if(typeof DeviceMotionEvent!=='undefined' && DeviceMotionEvent.requestPermission) await DeviceMotionEvent.requestPermission();
+       if(typeof DeviceOrientationEvent!=='undefined' && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); }catch(e){}
+  if(!MZ.on){ MZ.on=true; window.addEventListener('devicemotion',onMotion);
+    window.addEventListener('deviceorientationabsolute',onOrient); window.addEventListener('deviceorientation',onOrient); }
+  MZ.first=null; $('#mPct').textContent='—'; $('#mState').textContent='Aspetto i sensori…';
+  setTimeout(()=>{ if(!MZ.buf.length) $('#mState').textContent='Questo telefono non dà i sensori al browser'; },2500);
+  openSheet('#sMeasure');
+}
+$('#mGo').onclick=()=>{
+  const r=reading();
+  if(!r||r.moving||r.notflat){ toast('Appoggia il telefono piatto e tienilo fermo'); return; }
+  if(r.head==null){ toast('Serve la bussola per sapere la direzione'); return; }
+  if(!MZ.first){ MZ.first=r; liveLevel(); toast('Prima misura fatta'); return; }
+  const diff=((r.head-MZ.first.head)%360+360)%360;
+  if(Math.abs(diff-180)>40){ toast('Gira il telefono di mezzo giro e riprova'); return; }
+  const a=toEarth(MZ.first), b=toEarth(r), e=(a.e+b.e)/2, n=(a.n+b.n)/2;
+  const h=curHole(), k=slopeKey(), s=S.slopes[k]||(S.slopes[k]={rel:null,str:2,note:''});
+  const here = S.me && minDistPoly(S.me,h.green)<4 ? S.me : centroid(h.green);
+  (s.pts||(s.pts=[])).push({p:here, e:+e.toFixed(2), n:+n.toFixed(2), t:Date.now()});
+  store.set('slopes.'+S.course.id,S.slopes); MZ.first=null;
+  toast('Salvato: '+pctTxt(Math.hypot(e,n))+'. Spostati e misura un altro punto, o chiudi');
+  if(S.view==='green') enterGreenView();
+};
+$('#mDel').onclick=()=>{ const k=slopeKey(); if(k&&S.slopes[k]){ delete S.slopes[k].pts; store.set('slopes.'+S.course.id,S.slopes); } closeSheets(); if(S.view==='green') enterGreenView(); toast('Misure cancellate'); };
+$('#measureBtn').onclick=openMeasure; $('#gMeasure').onclick=openMeasure;
 
 /* ============ meteo e quota ============ */
 async function fetchWeather(){
@@ -1072,7 +1202,7 @@ async function downloadTiles(){
 
 /* ============ Galaxy Watch: notifica sempre aggiornata ============ */
 let swReg=null, lastPush='', lastPushT=0, wakeLock=null;
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=3',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js?v=4',{updateViaCache:'none'}).then(r=>{ swReg=r; r.update().catch(()=>{}); }).catch(()=>{}); }
 async function toggleWatch(){
   if(S.watch){ S.watch=false; $('#watchBtn').textContent='Attiva'; $('#watchState').textContent='Spento';
     if(swReg){ (await swReg.getNotifications({tag:'golf'})).forEach(n=>n.close()); } releaseWake(); return; }
@@ -1111,6 +1241,7 @@ $('#tShot').onclick=()=>{ if(!S.me){ toast('Aspetto la posizione GPS'); return; 
 $('#tScore').onclick=()=>{ if(!S.round){ toast('Carica prima un campo'); return; } S.scoreHole=S.hole; renderScore(); openSheet('#sScore'); };
 $('#tMore').onclick=()=>openSheet('#sMore');
 $('#openHaz').onclick=openHaz;
+$('#imgBtn').onclick=()=>{ const cur=store.get('img','auto'); store.set('img',cur==='esri'?'auto':'esri'); setImagery(S.course&&S.course.region); };
 $('#gesBtn').onclick=()=>{ if(!S.course){ toast('Carica prima un campo'); return; } openGes(); };
 $('#drawBtn').onclick=startDraw;
 $('#hereBtn').onclick=()=>{ closeSheets(); iAmOnGreen(); };

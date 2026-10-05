@@ -1,12 +1,12 @@
 // Tiene salvate le immagini del campo (funziona anche senza segnale) e gestisce la notifica per l'orologio.
-const TILES = 'caddie-tiles-v1';
+const TILES = 'caddie-tiles-v2';
 self.addEventListener('install', () => self.skipWaiting());
 // cancella le copie delle versioni vecchie dell'app, tiene solo le immagini della mappa
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(keys => Promise.all(keys.filter(k => k !== TILES).map(k => caches.delete(k)))).then(() => clients.claim())));
 self.addEventListener('fetch', e => {
   const url = e.request.url;
-  if (e.request.method !== 'GET' || !url.includes('arcgisonline.com')) return;
+  if (e.request.method !== 'GET' || !/arcgisonline\.com|geoservizi\.regione\.liguria\.it|cartografia\.servizirl\.it/.test(url)) return;
   e.respondWith(caches.open(TILES).then(async c => {
     const hit = await c.match(url);
     if (hit) return hit;
