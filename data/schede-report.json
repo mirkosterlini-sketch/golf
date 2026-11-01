@@ -100,12 +100,12 @@
   "nome": "FONTI",
   "regione": "Emilia Romagna",
   "url": "https://www.golfclublefonti.it/",
-  "pagine": 2,
-  "buche": 18,
-  "conFoto": 18,
+  "pagine": 16,
+  "buche": 0,
+  "conFoto": 0,
   "conTesto": 0,
-  "fonte": "https://www.golfclublefonti.it/il-campo/",
-  "esito": "aggiunta"
+  "fonte": "https://www.golfclublefonti.it/",
+  "esito": "schede non trovate"
  },
  {
   "ges": 71,
@@ -215,11 +215,11 @@
   "nome": "ALBISOLA",
   "regione": "Liguria",
   "url": "https://www.golfclubalbisola.it/",
-  "pagine": 5,
-  "buche": 1,
+  "pagine": 16,
+  "buche": 0,
   "conFoto": 0,
-  "conTesto": 1,
-  "fonte": "https://www.golfclubalbisola.it/il-campo",
+  "conTesto": 0,
+  "fonte": "https://www.golfclubalbisola.it/",
   "esito": "schede non trovate"
  },
  {
@@ -227,9 +227,9 @@
   "nome": "CASTELLARO",
   "regione": "Liguria",
   "url": "https://www.castellarogolf.it/",
-  "pagine": 1,
-  "buche": 3,
-  "conFoto": 3,
+  "pagine": 16,
+  "buche": 0,
+  "conFoto": 0,
   "conTesto": 0,
   "fonte": "https://www.castellarogolf.it/",
   "esito": "schede non trovate"
@@ -407,12 +407,12 @@
   "nome": "GARDAGOLF",
   "regione": "Lombardia",
   "url": "https://www.gardagolf.it/",
-  "pagine": 5,
-  "buche": 15,
-  "conFoto": 15,
-  "conTesto": 9,
-  "fonte": "https://www.gardagolf.it/percorso-bianco/",
-  "esito": "aggiunta"
+  "pagine": 9,
+  "buche": 1,
+  "conFoto": 1,
+  "conTesto": 1,
+  "fonte": "https://www.gardagolf.it/percorso-rosso/",
+  "esito": "schede non trovate"
  },
  {
   "ges": 102,
@@ -546,7 +546,7 @@
   "nome": "ROBINIE",
   "regione": "Lombardia",
   "url": "https://www.lerobinie.com/",
-  "pagine": 1,
+  "pagine": 16,
   "buche": 0,
   "conFoto": 0,
   "conTesto": 0,
@@ -645,8 +645,8 @@
   "regione": "Lombardia",
   "url": "https://www.golfvigevano.it/",
   "pagine": 1,
-  "buche": 2,
-  "conFoto": 2,
+  "buche": 3,
+  "conFoto": 3,
   "conTesto": 0,
   "fonte": "https://www.golfvigevano.it/",
   "esito": "schede non trovate"
@@ -742,9 +742,9 @@
   "nome": "CASTELCONTURBIA",
   "regione": "Piemonte",
   "url": "https://www.golfclubcastelconturbia.it/",
-  "pagine": 18,
-  "buche": 1,
-  "conFoto": 1,
+  "pagine": 20,
+  "buche": 0,
+  "conFoto": 0,
   "conTesto": 0,
   "fonte": "https://www.golfclubcastelconturbia.it/",
   "esito": "schede non trovate"
@@ -815,8 +815,8 @@
   "regione": "Piemonte",
   "url": "https://www.golfdesiles.it/",
   "pagine": 1,
-  "buche": 3,
-  "conFoto": 3,
+  "buche": 4,
+  "conFoto": 4,
   "conTesto": 0,
   "fonte": "https://www.golfdesiles.it/",
   "esito": "schede non trovate"
@@ -863,8 +863,8 @@
   "regione": "Piemonte",
   "url": "https://www.golfclublamargherita.it/",
   "pagine": 7,
-  "buche": 16,
-  "conFoto": 16,
+  "buche": 15,
+  "conFoto": 15,
   "conTesto": 0,
   "fonte": "https://www.golfclublamargherita.it/percorso/il-percorso/",
   "esito": "aggiunta"
@@ -874,9 +874,9 @@
   "nome": "MONCALIERI",
   "regione": "Piemonte",
   "url": "https://www.moncalierigolfclub.com/",
-  "pagine": 4,
-  "buche": 3,
-  "conFoto": 3,
+  "pagine": 16,
+  "buche": 0,
+  "conFoto": 0,
   "conTesto": 0,
   "fonte": "https://www.moncalierigolfclub.com/",
   "esito": "schede non trovate"
@@ -886,12 +886,7 @@
   "nome": "MONFERRATO",
   "regione": "Piemonte",
   "url": "https://www.golfclubmonferrato.it/",
-  "pagine": 1,
-  "buche": 3,
-  "conFoto": 3,
-  "conTesto": 2,
-  "fonte": "https://www.golfclubmonferrato.it/",
-  "esito": "schede non trovate"
+  "esito": "errore: Non riesco ad aprire il link"
  },
  {
   "ges": 734,
@@ -958,7 +953,12 @@
   "nome": "SERRA",
   "regione": "Piemonte",
   "url": "https://www.golflaserra.it/",
-  "esito": "errore: Non riesco ad aprire il link"
+  "pagine": 4,
+  "buche": 7,
+  "conFoto": 7,
+  "conTesto": 0,
+  "fonte": "https://www.golflaserra.it/golf",
+  "esito": "schede non trovate"
  },
  {
   "ges": 42,
@@ -1116,12 +1116,12 @@
   "nome": "RIVA TOSCANA",
   "regione": "Toscana",
   "url": "https://www.rivatoscana.it/",
-  "pagine": 3,
-  "buche": 20,
-  "conFoto": 20,
-  "conTesto": 18,
-  "fonte": "https://www.rivatoscana.it/golf-resort-toscana/percorso-golf",
-  "esito": "aggiunta"
+  "pagine": 16,
+  "buche": 0,
+  "conFoto": 0,
+  "conTesto": 0,
+  "fonte": "https://www.rivatoscana.it/",
+  "esito": "schede non trovate"
  },
  {
   "ges": 412,
